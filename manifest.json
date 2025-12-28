@@ -1,0 +1,17 @@
+{
+  "name": "Mastermind",
+  "short_name": "Mastermind",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#2563eb",
+  "description": "A sleek Mastermind code-breaking game.",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
