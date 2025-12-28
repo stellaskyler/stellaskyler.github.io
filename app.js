@@ -40,6 +40,7 @@ const elements = {
   paletteSize: document.querySelector("#palette-size"),
   allowDuplicates: document.querySelector("#allow-duplicates"),
   soundToggle: document.querySelector("#sound-toggle"),
+  soundLabel: document.querySelector("#sound-label"),
   modal: document.querySelector("#modal"),
   modalOpen: document.querySelector("#how-to"),
   modalClose: document.querySelector("#modal-close"),
@@ -51,6 +52,58 @@ let state = createInitialState(DEFAULT_OPTIONS);
 let boardRows = [];
 let eraseMode = false;
 let activePickerSlot = null;
+let soundEnabled = false;
+let audioContext = null;
+
+const SOUND_PRESETS = {
+  place: { frequency: 520, duration: 0.12, type: "triangle", gain: 0.18 },
+  erase: { frequency: 260, duration: 0.1, type: "sine", gain: 0.16 },
+  select: { frequency: 360, duration: 0.08, type: "square", gain: 0.12 },
+  submit: { frequency: 610, duration: 0.18, type: "triangle", gain: 0.2 },
+  win: { frequency: 820, duration: 0.3, type: "sine", gain: 0.24 },
+  lose: { frequency: 200, duration: 0.28, type: "sawtooth", gain: 0.2 },
+  start: { frequency: 480, duration: 0.16, type: "sine", gain: 0.18 },
+};
+
+function ensureAudioContext() {
+  if (!audioContext) {
+    audioContext = new AudioContext();
+  }
+  if (audioContext.state === "suspended") {
+    audioContext.resume();
+  }
+}
+
+function playSound(name) {
+  if (!soundEnabled) {
+    return;
+  }
+  const preset = SOUND_PRESETS[name];
+  if (!preset) {
+    return;
+  }
+  ensureAudioContext();
+  const now = audioContext.currentTime;
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+
+  oscillator.type = preset.type;
+  oscillator.frequency.setValueAtTime(preset.frequency, now);
+  gainNode.gain.setValueAtTime(0, now);
+  gainNode.gain.linearRampToValueAtTime(preset.gain, now + 0.02);
+  gainNode.gain.exponentialRampToValueAtTime(0.001, now + preset.duration);
+
+  oscillator.connect(gainNode).connect(audioContext.destination);
+  oscillator.start(now);
+  oscillator.stop(now + preset.duration + 0.05);
+}
+
+function updateSoundLabel() {
+  if (!elements.soundLabel) {
+    return;
+  }
+  elements.soundLabel.textContent = soundEnabled ? "Sound (on)" : "Sound (off)";
+}
 
 const colorPicker = document.createElement("select");
 colorPicker.id = "color-picker";
@@ -137,18 +190,29 @@ function startNewGame() {
   elements.statusMessage.textContent = "";
   elements.reveal.innerHTML = "";
   updateBoard();
+  playSound("start");
 }
 
 function setSelectedColor(index) {
   state.selectedColor = PALETTE[index]?.id ?? null;
   renderPalette(elements.palette, PALETTE, state.options.paletteSize, index);
+  if (state.selectedColor) {
+    playSound("select");
+  }
 }
 
 function updateSlot(rowIndex, colIndex, value) {
+  const previousValue = state.guesses[rowIndex][colIndex];
   state.guesses[rowIndex][colIndex] = value;
   state.activeSlot = colIndex;
   elements.statusMessage.textContent = "";
   updateBoard();
+  if (value && value !== previousValue) {
+    playSound("place");
+  }
+  if (!value && previousValue) {
+    playSound("erase");
+  }
 }
 
 function handleSlotClick(event) {
@@ -209,6 +273,7 @@ function submitGuess() {
     return;
   }
 
+  playSound("submit");
   const feedback = scoreGuess(state.secret, currentGuess);
   state.feedback[state.currentRow] = feedback;
   updateBoard();
@@ -218,6 +283,7 @@ function submitGuess() {
     elements.statusMessage.textContent = "You cracked the code!";
     renderReveal(elements.reveal, state.secret, paletteMap);
     elements.submit.disabled = true;
+    playSound("win");
     return;
   }
 
@@ -226,6 +292,7 @@ function submitGuess() {
     elements.statusMessage.textContent = "No more turns. The code was:";
     renderReveal(elements.reveal, state.secret, paletteMap);
     elements.submit.disabled = true;
+    playSound("lose");
     return;
   }
 
@@ -320,11 +387,16 @@ function wireEvents() {
   elements.paletteSize.addEventListener("change", startNewGame);
   elements.allowDuplicates.addEventListener("change", startNewGame);
   elements.soundToggle.addEventListener("change", () => {
-    elements.soundToggle.checked = false;
+    soundEnabled = elements.soundToggle.checked;
+    if (soundEnabled) {
+      ensureAudioContext();
+    }
+    updateSoundLabel();
   });
 }
 
 wireEvents();
+updateSoundLabel();
 startNewGame();
 
 if ("serviceWorker" in navigator) {
