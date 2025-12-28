@@ -105,25 +105,35 @@ function updateSoundLabel() {
   elements.soundLabel.textContent = soundEnabled ? "Sound (on)" : "Sound (off)";
 }
 
-const colorPicker = document.createElement("select");
+const colorPicker = document.createElement("div");
 colorPicker.id = "color-picker";
 colorPicker.className = "color-picker";
+colorPicker.setAttribute("role", "listbox");
 colorPicker.setAttribute("aria-label", "Pick a color");
+colorPicker.tabIndex = -1;
 document.body.appendChild(colorPicker);
 
 function populateColorPicker() {
   colorPicker.innerHTML = "";
-  const placeholder = document.createElement("option");
-  placeholder.value = "";
-  placeholder.textContent = "Pick a color";
-  placeholder.disabled = true;
-  placeholder.selected = true;
-  colorPicker.appendChild(placeholder);
-
   PALETTE.slice(0, state.options.paletteSize).forEach((color) => {
-    const option = document.createElement("option");
-    option.value = color.id;
-    option.textContent = color.name;
+    const option = document.createElement("button");
+    option.type = "button";
+    option.className = "color-picker__option";
+    option.dataset.colorId = color.id;
+    option.setAttribute("role", "option");
+    option.setAttribute("aria-label", color.name);
+
+    const swatch = document.createElement("span");
+    swatch.className = "color-picker__swatch";
+    swatch.style.background = color.hex;
+    swatch.textContent = color.symbol;
+
+    const label = document.createElement("span");
+    label.className = "color-picker__label";
+    label.textContent = color.name;
+
+    option.appendChild(swatch);
+    option.appendChild(label);
     colorPicker.appendChild(option);
   });
 }
@@ -137,13 +147,15 @@ function openColorPicker(slot, rowIndex, colIndex) {
   activePickerSlot = { rowIndex, colIndex };
   populateColorPicker();
   const rect = slot.getBoundingClientRect();
-  const pickerWidth = 220;
-  const pickerHeight = 48;
+  colorPicker.style.display = "grid";
+  colorPicker.style.visibility = "hidden";
+  const pickerWidth = colorPicker.offsetWidth || 220;
+  const pickerHeight = colorPicker.offsetHeight || 180;
   const left = Math.min(Math.max(rect.left, 12), window.innerWidth - pickerWidth - 12);
   const top = Math.min(rect.bottom + 8, window.innerHeight - pickerHeight - 12);
   colorPicker.style.left = `${left}px`;
   colorPicker.style.top = `${top}px`;
-  colorPicker.style.display = "block";
+  colorPicker.style.visibility = "visible";
   colorPicker.focus();
 }
 
@@ -356,12 +368,12 @@ function wireEvents() {
   elements.board.addEventListener("click", handleSlotClick);
   elements.board.addEventListener("contextmenu", handleSlotRightClick);
   elements.palette.addEventListener("click", handlePaletteClick);
-  colorPicker.addEventListener("change", (event) => {
-    const value = event.target.value;
-    if (!value || !activePickerSlot) {
-      hideColorPicker();
+  colorPicker.addEventListener("click", (event) => {
+    const option = event.target.closest(".color-picker__option");
+    if (!option || !activePickerSlot) {
       return;
     }
+    const value = option.dataset.colorId;
     const index = PALETTE.findIndex((color) => color.id === value);
     if (index >= 0) {
       setSelectedColor(index);
@@ -369,7 +381,6 @@ function wireEvents() {
     updateSlot(activePickerSlot.rowIndex, activePickerSlot.colIndex, value);
     hideColorPicker();
   });
-  colorPicker.addEventListener("blur", hideColorPicker);
   elements.submit.addEventListener("click", submitGuess);
   elements.erase.addEventListener("click", toggleErase);
   elements.newGame.addEventListener("click", startNewGame);
@@ -381,6 +392,11 @@ function wireEvents() {
     }
   });
   document.addEventListener("keydown", handleKeydown);
+  document.addEventListener("pointerdown", (event) => {
+    if (colorPicker.style.display !== "none" && !colorPicker.contains(event.target)) {
+      hideColorPicker();
+    }
+  });
   window.addEventListener("resize", hideColorPicker);
   window.addEventListener("scroll", hideColorPicker, true);
   elements.codeLength.addEventListener("change", startNewGame);
