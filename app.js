@@ -50,6 +50,53 @@ const paletteMap = new Map(PALETTE.map((color) => [color.id, color]));
 let state = createInitialState(DEFAULT_OPTIONS);
 let boardRows = [];
 let eraseMode = false;
+let activePickerSlot = null;
+
+const colorPicker = document.createElement("select");
+colorPicker.id = "color-picker";
+colorPicker.className = "color-picker";
+colorPicker.setAttribute("aria-label", "Pick a color");
+document.body.appendChild(colorPicker);
+
+function populateColorPicker() {
+  colorPicker.innerHTML = "";
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Pick a color";
+  placeholder.disabled = true;
+  placeholder.selected = true;
+  colorPicker.appendChild(placeholder);
+
+  PALETTE.slice(0, state.options.paletteSize).forEach((color) => {
+    const option = document.createElement("option");
+    option.value = color.id;
+    option.textContent = color.name;
+    colorPicker.appendChild(option);
+  });
+}
+
+function hideColorPicker() {
+  colorPicker.style.display = "none";
+  activePickerSlot = null;
+}
+
+function openColorPicker(slot, rowIndex, colIndex) {
+  activePickerSlot = { rowIndex, colIndex };
+  populateColorPicker();
+  const rect = slot.getBoundingClientRect();
+  const pickerWidth = 220;
+  const pickerHeight = 48;
+  const left = Math.min(Math.max(rect.left, 12), window.innerWidth - pickerWidth - 12);
+  const top = Math.min(rect.bottom + 8, window.innerHeight - pickerHeight - 12);
+  colorPicker.style.left = `${left}px`;
+  colorPicker.style.top = `${top}px`;
+  colorPicker.style.display = "block";
+  colorPicker.focus();
+}
+
+function shouldUseDropdown() {
+  return window.matchMedia("(pointer: coarse)").matches || window.matchMedia("(max-width: 640px)").matches;
+}
 
 function syncSubmitButton() {
   const currentGuess = state.guesses[state.currentRow];
@@ -85,6 +132,8 @@ function startNewGame() {
 
   boardRows = createBoard(elements.board, state.options.maxRows, state.options.codeLength);
   renderPalette(elements.palette, PALETTE, state.options.paletteSize, 0);
+  populateColorPicker();
+  hideColorPicker();
   elements.statusMessage.textContent = "";
   elements.reveal.innerHTML = "";
   updateBoard();
@@ -114,6 +163,11 @@ function handleSlotClick(event) {
   }
   if (eraseMode || event.button === 2) {
     updateSlot(rowIndex, colIndex, null);
+    return;
+  }
+
+  if (shouldUseDropdown()) {
+    openColorPicker(slot, rowIndex, colIndex);
     return;
   }
 
@@ -235,6 +289,20 @@ function wireEvents() {
   elements.board.addEventListener("click", handleSlotClick);
   elements.board.addEventListener("contextmenu", handleSlotRightClick);
   elements.palette.addEventListener("click", handlePaletteClick);
+  colorPicker.addEventListener("change", (event) => {
+    const value = event.target.value;
+    if (!value || !activePickerSlot) {
+      hideColorPicker();
+      return;
+    }
+    const index = PALETTE.findIndex((color) => color.id === value);
+    if (index >= 0) {
+      setSelectedColor(index);
+    }
+    updateSlot(activePickerSlot.rowIndex, activePickerSlot.colIndex, value);
+    hideColorPicker();
+  });
+  colorPicker.addEventListener("blur", hideColorPicker);
   elements.submit.addEventListener("click", submitGuess);
   elements.erase.addEventListener("click", toggleErase);
   elements.newGame.addEventListener("click", startNewGame);
@@ -246,6 +314,8 @@ function wireEvents() {
     }
   });
   document.addEventListener("keydown", handleKeydown);
+  window.addEventListener("resize", hideColorPicker);
+  window.addEventListener("scroll", hideColorPicker, true);
   elements.codeLength.addEventListener("change", startNewGame);
   elements.paletteSize.addEventListener("change", startNewGame);
   elements.allowDuplicates.addEventListener("change", startNewGame);

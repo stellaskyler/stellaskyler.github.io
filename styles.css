@@ -191,6 +191,19 @@ body {
   gap: 12px;
 }
 
+.color-picker {
+  position: fixed;
+  z-index: 20;
+  display: none;
+  min-width: 200px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 2px solid rgba(79, 70, 229, 0.2);
+  background: #ffffff;
+  font: inherit;
+  box-shadow: var(--shadow);
+}
+
 .palette__option {
   border: 2px solid transparent;
   border-radius: 14px;
@@ -385,5 +398,9 @@ body {
   .options label {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .palette-panel {
+    display: none;
   }
 }
