@@ -176,6 +176,12 @@ function updateBoard() {
   syncSubmitButton();
 }
 
+function setEraseMode(enabled) {
+  eraseMode = enabled;
+  elements.erase.classList.toggle("button--ghost", !eraseMode);
+  elements.erase.textContent = eraseMode ? "Erase On" : "Erase";
+}
+
 function startNewGame() {
   state.options = {
     ...state.options,
@@ -186,7 +192,7 @@ function startNewGame() {
 
   resetGuesses(state);
   state.selectedColor = PALETTE[0].id;
-  eraseMode = false;
+  setEraseMode(false);
 
   state.secret = generateSecret({
     length: state.options.codeLength,
@@ -208,6 +214,9 @@ function startNewGame() {
 function setSelectedColor(index) {
   state.selectedColor = PALETTE[index]?.id ?? null;
   renderPalette(elements.palette, PALETTE, state.options.paletteSize, index);
+  if (eraseMode && state.selectedColor) {
+    setEraseMode(false);
+  }
   if (state.selectedColor) {
     playSound("select");
   }
@@ -323,9 +332,7 @@ function handlePaletteClick(event) {
 }
 
 function toggleErase() {
-  eraseMode = !eraseMode;
-  elements.erase.classList.toggle("button--ghost", !eraseMode);
-  elements.erase.textContent = eraseMode ? "Erase On" : "Erase";
+  setEraseMode(!eraseMode);
 }
 
 function handleKeydown(event) {
