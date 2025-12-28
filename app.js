@@ -98,6 +98,7 @@ function setSelectedColor(index) {
 function updateSlot(rowIndex, colIndex, value) {
   state.guesses[rowIndex][colIndex] = value;
   state.activeSlot = colIndex;
+  elements.statusMessage.textContent = "";
   updateBoard();
 }
 

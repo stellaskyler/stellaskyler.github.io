@@ -26,7 +26,8 @@ export function validateGuess(guess, { length, paletteSize, allowDuplicates, pal
     return { valid: false, error: `Guess must have ${length} slots.` };
   }
 
-  const allowed = new Set(palette.slice(0, paletteSize));
+  const maxIndex = paletteSize ?? palette.length;
+  const allowed = new Set(palette.slice(0, maxIndex));
   for (const color of guess) {
     if (!allowed.has(color)) {
       return { valid: false, error: "Guess contains an invalid color." };
