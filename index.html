@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mastermind</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="app__header">
+        <div>
+          <h1>Mastermind</h1>
+          <p class="subtitle">Crack the code in 10 turns.</p>
+        </div>
+        <div class="header__actions">
+          <button id="how-to" class="button button--ghost">How to play</button>
+          <button id="new-game" class="button">New Game</button>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="board" aria-live="polite" aria-label="Game board">
+          <div id="board" class="board__rows"></div>
+          <div class="board__reveal" id="reveal" aria-live="polite">
+            <span class="reveal__label">Secret</span>
+            <div class="reveal__pegs" id="reveal-pegs"></div>
+            <span id="status-message" class="reveal__message"></span>
+          </div>
+        </section>
+
+        <aside class="panel">
+          <section class="panel__section">
+            <h2>Palette</h2>
+            <div id="palette" class="palette" role="radiogroup" aria-label="Color palette"></div>
+          </section>
+
+          <section class="panel__section">
+            <h2>Controls</h2>
+            <div class="controls">
+              <button id="erase" class="button button--ghost">Erase</button>
+              <button id="submit" class="button" disabled>Submit Guess</button>
+            </div>
+          </section>
+
+          <section class="panel__section">
+            <h2>Difficulty</h2>
+            <div class="options">
+              <label>
+                Code length
+                <select id="code-length">
+                  <option value="4" selected>4</option>
+                  <option value="5">5</option>
+                </select>
+              </label>
+              <label>
+                Palette size
+                <select id="palette-size">
+                  <option value="6" selected>6</option>
+                  <option value="8">8</option>
+                </select>
+              </label>
+              <label class="toggle">
+                <input id="allow-duplicates" type="checkbox" checked />
+                Allow duplicates
+              </label>
+              <label class="toggle">
+                <input id="sound-toggle" type="checkbox" />
+                Sound (off)
+              </label>
+            </div>
+          </section>
+
+          <section class="panel__section">
+            <h2>Tips</h2>
+            <ul class="tips">
+              <li>Blacks = correct color &amp; position.</li>
+              <li>Whites = correct color, wrong position.</li>
+              <li>Use number keys 1-8 for quick entry.</li>
+            </ul>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <div id="modal" class="modal" aria-hidden="true">
+      <div class="modal__content" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <header class="modal__header">
+          <h2 id="modal-title">How to play</h2>
+          <button id="modal-close" class="button button--ghost" aria-label="Close">✕</button>
+        </header>
+        <div class="modal__body">
+          <p>Guess the hidden code before the turns run out.</p>
+          <ul>
+            <li>Select a color from the palette.</li>
+            <li>Click a slot to place the color.</li>
+            <li>Submit to see black and white key pegs.</li>
+            <li>Black means right color in the right spot.</li>
+            <li>White means the color exists elsewhere.</li>
+          </ul>
+          <p>Press ESC to close this dialog.</p>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
