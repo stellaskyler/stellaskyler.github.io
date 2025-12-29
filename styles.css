@@ -127,6 +127,12 @@ body {
   box-shadow: 0 0 0 4px var(--accent-soft);
 }
 
+.peg-slot.targeted {
+  border-style: solid;
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.25);
+}
+
 .key-pegs {
   display: grid;
   grid-template-columns: repeat(2, var(--key-peg-size));
@@ -203,60 +209,6 @@ body {
   gap: 12px;
 }
 
-.color-picker {
-  position: fixed;
-  z-index: 20;
-  display: none;
-  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
-  gap: 10px;
-  min-width: 220px;
-  padding: 12px;
-  border-radius: 12px;
-  border: 2px solid rgba(79, 70, 229, 0.2);
-  background: #ffffff;
-  font: inherit;
-  box-shadow: var(--shadow);
-}
-
-.color-picker__option {
-  border: 1px solid transparent;
-  border-radius: 12px;
-  background: #f8fafc;
-  padding: 8px 6px;
-  display: grid;
-  justify-items: center;
-  gap: 6px;
-  font: inherit;
-  cursor: pointer;
-  transition: transform 0.2s ease, border 0.2s ease, box-shadow 0.2s ease;
-}
-
-.color-picker__option:focus-visible {
-  outline: 3px solid rgba(79, 70, 229, 0.45);
-  outline-offset: 2px;
-}
-
-.color-picker__option:hover {
-  transform: translateY(-1px);
-  border-color: rgba(79, 70, 229, 0.3);
-  box-shadow: 0 8px 16px rgba(79, 70, 229, 0.15);
-}
-
-.color-picker__swatch {
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  color: #111827;
-  font-weight: 700;
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.8);
-}
-
-.color-picker__label {
-  font-size: 0.78rem;
-  color: var(--muted);
-}
 
 .palette__option {
   border: 2px solid transparent;
@@ -271,17 +223,22 @@ body {
   touch-action: manipulation;
 }
 
-.palette__option.selected {
-  border-color: var(--accent);
-  transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(79, 70, 229, 0.2);
-}
-
 .palette__option:hover {
   transform: translateY(-2px);
   border-color: rgba(79, 70, 229, 0.3);
 }
 
+.palette__option.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.palette__option.is-disabled:hover {
+  transform: none;
+  border-color: transparent;
+}
 .palette__swatch {
   width: var(--swatch-size);
   height: var(--swatch-size);

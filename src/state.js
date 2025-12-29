@@ -5,8 +5,8 @@ export function createInitialState(options) {
     guesses: Array.from({ length: options.maxRows }, () => Array(options.codeLength).fill(null)),
     feedback: Array.from({ length: options.maxRows }, () => null),
     currentRow: 0,
-    selectedColor: null,
-    activeSlot: 0,
+    nextFillIndex: 0,
+    editIndex: null,
     status: "playing",
   };
 }
@@ -17,6 +17,7 @@ export function resetGuesses(state) {
   );
   state.feedback = Array.from({ length: state.options.maxRows }, () => null);
   state.currentRow = 0;
-  state.activeSlot = 0;
+  state.nextFillIndex = 0;
+  state.editIndex = null;
   state.status = "playing";
 }

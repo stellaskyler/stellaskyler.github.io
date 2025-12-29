@@ -32,15 +32,16 @@ export function createBoard(container, rows, codeLength) {
   return rowEls;
 }
 
-export function renderPalette(container, palette, paletteSize, selectedIndex) {
+export function renderPalette(container, palette, paletteSize, disabledColors = new Set()) {
   container.innerHTML = "";
   palette.slice(0, paletteSize).forEach((color, index) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "palette__option";
     button.dataset.index = String(index);
-    button.setAttribute("role", "radio");
-    button.setAttribute("aria-checked", selectedIndex === index ? "true" : "false");
+    button.setAttribute("aria-label", color.name);
+    const isDisabled = disabledColors.has(color.id);
+    button.setAttribute("aria-disabled", isDisabled ? "true" : "false");
 
     const swatch = document.createElement("div");
     swatch.className = "palette__swatch";
@@ -50,15 +51,13 @@ export function renderPalette(container, palette, paletteSize, selectedIndex) {
 
     button.appendChild(swatch);
 
-    if (selectedIndex === index) {
-      button.classList.add("selected");
-    }
+    button.classList.toggle("is-disabled", isDisabled);
 
     container.appendChild(button);
   });
 }
 
-export function renderRowGuess(rowElements, guess, paletteMap, isActiveRow) {
+export function renderRowGuess(rowElements, guess, paletteMap, isActiveRow, editIndex) {
   const slots = rowElements.pegRow.querySelectorAll(".peg-slot");
   slots.forEach((slot, index) => {
     const value = guess[index];
@@ -66,6 +65,8 @@ export function renderRowGuess(rowElements, guess, paletteMap, isActiveRow) {
     slot.style.background = value ? paletteMap.get(value).hex : "#f8fafc";
     slot.classList.toggle("filled", Boolean(value));
     slot.classList.toggle("active", isActiveRow);
+    slot.classList.toggle("targeted", isActiveRow && editIndex === index);
+    slot.setAttribute("aria-pressed", isActiveRow && editIndex === index ? "true" : "false");
     slot.disabled = !isActiveRow;
   });
 }
