@@ -54,6 +54,7 @@ let eraseMode = false;
 let activePickerSlot = null;
 let soundEnabled = false;
 let audioContext = null;
+let ignoreOutsidePointerDownUntil = 0;
 
 const SOUND_PRESETS = {
   place: { frequency: 520, duration: 0.12, type: "triangle", gain: 0.18 },
@@ -141,6 +142,7 @@ function populateColorPicker() {
 function hideColorPicker() {
   colorPicker.style.display = "none";
   activePickerSlot = null;
+  ignoreOutsidePointerDownUntil = Date.now() + 200;
 }
 
 function openColorPicker(slot, rowIndex, colIndex) {
@@ -157,10 +159,7 @@ function openColorPicker(slot, rowIndex, colIndex) {
   colorPicker.style.top = `${top}px`;
   colorPicker.style.visibility = "visible";
   colorPicker.focus();
-}
-
-function shouldUseDropdown() {
-  return window.matchMedia("(pointer: coarse)").matches || window.matchMedia("(max-width: 640px)").matches;
+  ignoreOutsidePointerDownUntil = Date.now() + 200;
 }
 
 function syncSubmitButton() {
@@ -251,16 +250,7 @@ function handleSlotClick(event) {
     return;
   }
 
-  if (shouldUseDropdown()) {
-    openColorPicker(slot, rowIndex, colIndex);
-    return;
-  }
-
-  if (!state.selectedColor) {
-    return;
-  }
-
-  updateSlot(rowIndex, colIndex, state.selectedColor);
+  openColorPicker(slot, rowIndex, colIndex);
 }
 
 function handleSlotRightClick(event) {
@@ -400,7 +390,16 @@ function wireEvents() {
   });
   document.addEventListener("keydown", handleKeydown);
   document.addEventListener("pointerdown", (event) => {
-    if (colorPicker.style.display !== "none" && !colorPicker.contains(event.target)) {
+    if (colorPicker.style.display === "none") {
+      return;
+    }
+    if (Date.now() < ignoreOutsidePointerDownUntil) {
+      return;
+    }
+    if (colorPicker.contains(event.target) || event.target.closest(".peg-slot")) {
+      return;
+    }
+    if (colorPicker.style.display !== "none") {
       hideColorPicker();
     }
   });
