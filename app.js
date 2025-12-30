@@ -31,35 +31,78 @@ const DEFAULT_OPTIONS = {
   paletteSize: 6,
   allowDuplicates: true,
   maxRows: 10,
+  soundEnabled: false,
+  hapticsEnabled: false,
+  timerEnabled: false,
+  timerSeconds: 300,
+  highContrast: false,
+  largeText: false,
+  reducedMotion: false,
 };
 
 const elements = {
+  headerActions: document.querySelector("#header-actions"),
+  navHome: document.querySelector("#nav-home"),
+  screenHome: document.querySelector("#screen-home"),
+  screenGame: document.querySelector("#screen-game"),
+  screenSettings: document.querySelector("#screen-settings"),
+  screenStats: document.querySelector("#screen-stats"),
+  resumeGame: document.querySelector("#resume-game"),
+  homeNewGame: document.querySelector("#home-new-game"),
+  openSettings: document.querySelector("#open-settings"),
+  openStats: document.querySelector("#open-stats"),
+  resumeStatus: document.querySelector("#resume-status"),
   board: document.querySelector("#board"),
   palette: document.querySelector("#palette"),
   submit: document.querySelector("#submit"),
   erase: document.querySelector("#erase"),
   newGame: document.querySelector("#new-game"),
+  timerValue: document.querySelector("#timer-value"),
+  rowCounter: document.querySelector("#row-counter"),
   reveal: document.querySelector("#reveal-pegs"),
   statusMessage: document.querySelector("#status-message"),
-  codeLength: document.querySelector("#code-length"),
-  paletteSize: document.querySelector("#palette-size"),
-  allowDuplicates: document.querySelector("#allow-duplicates"),
-  soundToggle: document.querySelector("#sound-toggle"),
-  soundLabel: document.querySelector("#sound-label"),
+  settingsCodeLength: document.querySelector("#settings-code-length"),
+  settingsPaletteSize: document.querySelector("#settings-palette-size"),
+  settingsAllowDuplicates: document.querySelector("#settings-allow-duplicates"),
+  settingsMaxRows: document.querySelector("#settings-max-rows"),
+  settingsSoundToggle: document.querySelector("#settings-sound-toggle"),
+  settingsSoundLabel: document.querySelector("#settings-sound-label"),
+  settingsHaptics: document.querySelector("#settings-haptics"),
+  settingsTimerEnabled: document.querySelector("#settings-timer-enabled"),
+  settingsTimerSeconds: document.querySelector("#settings-timer-seconds"),
+  settingsHighContrast: document.querySelector("#settings-high-contrast"),
+  settingsLargeText: document.querySelector("#settings-large-text"),
+  settingsReducedMotion: document.querySelector("#settings-reduced-motion"),
+  saveSettings: document.querySelector("#save-settings"),
+  settingsNewGame: document.querySelector("#settings-new-game"),
+  statsGames: document.querySelector("#stats-games"),
+  statsWins: document.querySelector("#stats-wins"),
+  statsLosses: document.querySelector("#stats-losses"),
+  statsWinRate: document.querySelector("#stats-win-rate"),
+  statsCurrentStreak: document.querySelector("#stats-current-streak"),
+  statsBestStreak: document.querySelector("#stats-best-streak"),
+  statsBestTurns: document.querySelector("#stats-best-turns"),
+  statsAverageTurns: document.querySelector("#stats-average-turns"),
   modal: document.querySelector("#modal"),
-  modalOpen: document.querySelector("#how-to"),
   modalClose: document.querySelector("#modal-close"),
 };
 
 const paletteMap = new Map(PALETTE.map((color) => [color.id, color]));
+const modalOpenButtons = document.querySelectorAll(".js-how-to");
 
-let state = createInitialState(DEFAULT_OPTIONS);
+const STORAGE_KEY = "mastermind-state";
+const SETTINGS_KEY = "mastermind-settings";
+const STATS_KEY = "mastermind-stats";
+
+let settings = loadSettings();
+let state = createInitialState(settings);
 let boardRows = [];
 let eraseMode = false;
-let soundEnabled = false;
+let soundEnabled = settings.soundEnabled;
 let audioContext = null;
 let hintTimeout = null;
-const STORAGE_KEY = "mastermind-state";
+let timerInterval = null;
+let currentScreen = "home";
 
 const SOUND_PRESETS = {
   place: { frequency: 520, duration: 0.12, type: "triangle", gain: 0.18 },
@@ -105,12 +148,252 @@ function playSound(name) {
 }
 
 function updateSoundLabel() {
-  if (!elements.soundLabel) {
+  if (!elements.settingsSoundLabel) {
     return;
   }
-  elements.soundLabel.textContent = soundEnabled ? "Sound (on)" : "Sound (off)";
+  elements.settingsSoundLabel.textContent = soundEnabled ? "Sound (on)" : "Sound (off)";
 }
 
+function clampNumber(value, min, max, fallback) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return fallback;
+  }
+  return Math.min(Math.max(number, min), max);
+}
+
+function loadSettings() {
+  const saved = localStorage.getItem(SETTINGS_KEY);
+  if (!saved) {
+    return { ...DEFAULT_OPTIONS };
+  }
+  try {
+    const parsed = JSON.parse(saved);
+    return { ...DEFAULT_OPTIONS, ...parsed };
+  } catch {
+    return { ...DEFAULT_OPTIONS };
+  }
+}
+
+function saveSettings(nextSettings) {
+  settings = { ...settings, ...nextSettings };
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  soundEnabled = settings.soundEnabled;
+  updateSoundLabel();
+  applyAccessibility(settings);
+  updateTimerDisplay();
+}
+
+function applySettingsToForm(currentSettings) {
+  elements.settingsCodeLength.value = String(currentSettings.codeLength);
+  elements.settingsPaletteSize.value = String(currentSettings.paletteSize);
+  elements.settingsAllowDuplicates.checked = currentSettings.allowDuplicates;
+  elements.settingsMaxRows.value = String(currentSettings.maxRows);
+  elements.settingsSoundToggle.checked = currentSettings.soundEnabled;
+  elements.settingsHaptics.checked = currentSettings.hapticsEnabled;
+  elements.settingsTimerEnabled.checked = currentSettings.timerEnabled;
+  elements.settingsTimerSeconds.value = String(currentSettings.timerSeconds);
+  elements.settingsHighContrast.checked = currentSettings.highContrast;
+  elements.settingsLargeText.checked = currentSettings.largeText;
+  elements.settingsReducedMotion.checked = currentSettings.reducedMotion;
+}
+
+function getSettingsFromForm() {
+  return {
+    codeLength: clampNumber(elements.settingsCodeLength.value, 3, 6, DEFAULT_OPTIONS.codeLength),
+    paletteSize: clampNumber(elements.settingsPaletteSize.value, 4, 8, DEFAULT_OPTIONS.paletteSize),
+    allowDuplicates: elements.settingsAllowDuplicates.checked,
+    maxRows: clampNumber(elements.settingsMaxRows.value, 6, 14, DEFAULT_OPTIONS.maxRows),
+    soundEnabled: elements.settingsSoundToggle.checked,
+    hapticsEnabled: elements.settingsHaptics.checked,
+    timerEnabled: elements.settingsTimerEnabled.checked,
+    timerSeconds: clampNumber(elements.settingsTimerSeconds.value, 60, 1800, DEFAULT_OPTIONS.timerSeconds),
+    highContrast: elements.settingsHighContrast.checked,
+    largeText: elements.settingsLargeText.checked,
+    reducedMotion: elements.settingsReducedMotion.checked,
+  };
+}
+
+function applyAccessibility(currentSettings) {
+  document.body.classList.toggle("theme-high-contrast", currentSettings.highContrast);
+  document.body.classList.toggle("theme-large-text", currentSettings.largeText);
+  document.body.classList.toggle("theme-reduced-motion", currentSettings.reducedMotion);
+}
+
+function loadStats() {
+  const saved = localStorage.getItem(STATS_KEY);
+  if (!saved) {
+    return {
+      games: 0,
+      wins: 0,
+      losses: 0,
+      currentStreak: 0,
+      bestStreak: 0,
+      bestTurns: null,
+      averageTurns: null,
+    };
+  }
+  try {
+    return JSON.parse(saved);
+  } catch {
+    return {
+      games: 0,
+      wins: 0,
+      losses: 0,
+      currentStreak: 0,
+      bestStreak: 0,
+      bestTurns: null,
+      averageTurns: null,
+    };
+  }
+}
+
+function saveStats(stats) {
+  localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+}
+
+function recordStats(result, turns) {
+  const stats = loadStats();
+  stats.games += 1;
+  if (result === "won") {
+    stats.wins += 1;
+    stats.currentStreak += 1;
+    stats.bestStreak = Math.max(stats.bestStreak, stats.currentStreak);
+    if (stats.bestTurns === null || turns < stats.bestTurns) {
+      stats.bestTurns = turns;
+    }
+  } else {
+    stats.losses += 1;
+    stats.currentStreak = 0;
+  }
+  const previousAverage = Number(stats.averageTurns);
+  if (Number.isFinite(previousAverage)) {
+    stats.averageTurns = (previousAverage * (stats.games - 1) + turns) / stats.games;
+  } else {
+    stats.averageTurns = turns;
+  }
+  saveStats(stats);
+  renderStats(stats);
+}
+
+function renderStats(stats = loadStats()) {
+  const winRate = stats.games ? Math.round((stats.wins / stats.games) * 100) : 0;
+  elements.statsGames.textContent = String(stats.games);
+  elements.statsWins.textContent = String(stats.wins);
+  elements.statsLosses.textContent = String(stats.losses);
+  elements.statsWinRate.textContent = `${winRate}%`;
+  elements.statsCurrentStreak.textContent = String(stats.currentStreak);
+  elements.statsBestStreak.textContent = String(stats.bestStreak);
+  elements.statsBestTurns.textContent =
+    stats.bestTurns === null ? "-" : `${stats.bestTurns} turn${stats.bestTurns === 1 ? "" : "s"}`;
+  elements.statsAverageTurns.textContent =
+    stats.averageTurns === null ? "-" : stats.averageTurns.toFixed(1);
+}
+
+function triggerHaptics(pattern) {
+  if (!settings.hapticsEnabled) {
+    return;
+  }
+  if (navigator.vibrate) {
+    navigator.vibrate(pattern);
+  }
+}
+
+function formatTimer(seconds) {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}:${String(remainingSeconds).padStart(2, "0")}`;
+}
+
+function updateTimerDisplay() {
+  if (!elements.timerValue) {
+    return;
+  }
+  if (!state.options.timerEnabled) {
+    elements.timerValue.textContent = "Off";
+    return;
+  }
+  const remaining = Number.isFinite(state.timerRemaining)
+    ? Math.max(state.timerRemaining, 0)
+    : settings.timerSeconds;
+  elements.timerValue.textContent = formatTimer(remaining);
+}
+
+function stopTimer() {
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+}
+
+function startTimer() {
+  stopTimer();
+  if (!state.options.timerEnabled || state.status !== "playing") {
+    updateTimerDisplay();
+    return;
+  }
+  if (!Number.isFinite(state.timerRemaining)) {
+    state.timerRemaining = state.options.timerSeconds;
+  }
+  updateTimerDisplay();
+  timerInterval = window.setInterval(() => {
+    if (state.status !== "playing") {
+      stopTimer();
+      return;
+    }
+    state.timerRemaining = Math.max(0, state.timerRemaining - 1);
+    updateTimerDisplay();
+    if (state.timerRemaining <= 0) {
+      handleTimedOut();
+    }
+    saveState();
+  }, 1000);
+}
+
+function updateStatusPanel() {
+  if (elements.rowCounter) {
+    elements.rowCounter.textContent = `${state.currentRow + 1} / ${state.options.maxRows}`;
+  }
+  updateTimerDisplay();
+}
+
+function updateResumeAvailability() {
+  const savedState = loadState();
+  const hasResume = Boolean(savedState);
+  elements.resumeGame.disabled = false;
+  elements.resumeGame.textContent = hasResume ? "Resume Game" : "Play";
+  elements.resumeStatus.textContent = hasResume
+    ? "Continue your in-progress game."
+    : "Start a new puzzle or continue your last game.";
+}
+
+function setScreen(screen) {
+  const screens = {
+    home: elements.screenHome,
+    game: elements.screenGame,
+    settings: elements.screenSettings,
+    stats: elements.screenStats,
+  };
+  Object.entries(screens).forEach(([key, node]) => {
+    if (!node) {
+      return;
+    }
+    node.hidden = key !== screen;
+  });
+  elements.headerActions.hidden = screen === "home";
+  if (screen === "stats") {
+    renderStats();
+  }
+  if (screen === "game") {
+    startTimer();
+  } else {
+    stopTimer();
+  }
+  if (screen === "home") {
+    updateResumeAvailability();
+  }
+  currentScreen = screen;
+}
 function getFirstEmptyIndex(guess) {
   const index = guess.indexOf(null);
   return index === -1 ? null : index;
@@ -160,6 +443,7 @@ function updateBoard() {
   });
   renderPalette(elements.palette, PALETTE, state.options.paletteSize, getDisabledColors());
   syncSubmitButton();
+  updateStatusPanel();
 }
 
 function saveState() {
@@ -174,7 +458,7 @@ function loadState() {
   }
   try {
     const parsed = JSON.parse(saved);
-    return hydrateState(parsed, DEFAULT_OPTIONS);
+    return hydrateState(parsed, settings);
   } catch {
     return null;
   }
@@ -193,16 +477,12 @@ function setEraseMode(enabled) {
 }
 
 function startNewGame() {
-  state.options = {
-    ...state.options,
-    codeLength: Number(elements.codeLength.value),
-    paletteSize: Number(elements.paletteSize.value),
-    allowDuplicates: elements.allowDuplicates.checked,
-  };
+  state.options = { ...settings };
 
   resetGuesses(state);
   setEraseMode(false);
   updateNextFillIndex();
+  state.timerRemaining = state.options.timerEnabled ? state.options.timerSeconds : null;
 
   state.secret = generateSecret({
     length: state.options.codeLength,
@@ -218,6 +498,7 @@ function startNewGame() {
   updateBoard();
   playSound("start");
   saveState();
+  startTimer();
 }
 
 function updateSlot(rowIndex, colIndex, value) {
@@ -228,9 +509,11 @@ function updateSlot(rowIndex, colIndex, value) {
   updateBoard();
   if (value && value !== previousValue) {
     playSound("place");
+    triggerHaptics(20);
   }
   if (!value && previousValue) {
     playSound("erase");
+    triggerHaptics([10, 40, 10]);
   }
   saveState();
 }
@@ -270,6 +553,28 @@ function handleSlotRightClick(event) {
   updateSlot(rowIndex, colIndex, null);
 }
 
+function endGame({ status, message, sound }) {
+  if (state.status !== "playing") {
+    return;
+  }
+  state.status = status;
+  elements.statusMessage.textContent = message;
+  renderReveal(elements.reveal, state.secret, paletteMap);
+  elements.submit.disabled = true;
+  playSound(sound);
+  stopTimer();
+  recordStats(status, state.currentRow + 1);
+  saveState();
+  updateResumeAvailability();
+}
+
+function handleTimedOut() {
+  if (state.status !== "playing") {
+    return;
+  }
+  endGame({ status: "lost", message: "Time's up. The code was:", sound: "lose" });
+}
+
 function submitGuess() {
   if (state.status !== "playing") {
     return;
@@ -288,27 +593,18 @@ function submitGuess() {
   }
 
   playSound("submit");
+  triggerHaptics(30);
   const feedback = scoreGuess(state.secret, currentGuess);
   state.feedback[state.currentRow] = feedback;
   updateBoard();
 
   if (feedback.blacks === state.options.codeLength) {
-    state.status = "won";
-    elements.statusMessage.textContent = "You cracked the code!";
-    renderReveal(elements.reveal, state.secret, paletteMap);
-    elements.submit.disabled = true;
-    playSound("win");
-    saveState();
+    endGame({ status: "won", message: "You cracked the code!", sound: "win" });
     return;
   }
 
   if (state.currentRow === state.options.maxRows - 1) {
-    state.status = "lost";
-    elements.statusMessage.textContent = "No more turns. The code was:";
-    renderReveal(elements.reveal, state.secret, paletteMap);
-    elements.submit.disabled = true;
-    playSound("lose");
-    saveState();
+    endGame({ status: "lost", message: "No more turns. The code was:", sound: "lose" });
     return;
   }
 
@@ -377,6 +673,10 @@ function handleKeydown(event) {
     return;
   }
 
+  if (currentScreen !== "game") {
+    return;
+  }
+
   if (state.status !== "playing") {
     return;
   }
@@ -406,8 +706,29 @@ function wireEvents() {
   elements.palette.addEventListener("click", handlePaletteClick);
   elements.submit.addEventListener("click", submitGuess);
   elements.erase.addEventListener("click", toggleErase);
-  elements.newGame.addEventListener("click", startNewGame);
-  elements.modalOpen.addEventListener("click", () => openModal(elements.modal));
+  elements.newGame.addEventListener("click", () => {
+    startNewGame();
+    setScreen("game");
+  });
+  elements.navHome.addEventListener("click", () => setScreen("home"));
+  elements.resumeGame.addEventListener("click", () => {
+    const loadedState = loadState();
+    if (loadedState) {
+      applyLoadedState(loadedState);
+    } else {
+      startNewGame();
+    }
+    setScreen("game");
+  });
+  elements.homeNewGame.addEventListener("click", () => {
+    startNewGame();
+    setScreen("game");
+  });
+  elements.openSettings.addEventListener("click", () => setScreen("settings"));
+  elements.openStats.addEventListener("click", () => setScreen("stats"));
+  modalOpenButtons.forEach((button) => {
+    button.addEventListener("click", () => openModal(elements.modal));
+  });
   elements.modalClose.addEventListener("click", () => closeModal(elements.modal));
   elements.modal.addEventListener("click", (event) => {
     if (event.target === elements.modal) {
@@ -415,38 +736,58 @@ function wireEvents() {
     }
   });
   document.addEventListener("keydown", handleKeydown);
-  elements.codeLength.addEventListener("change", startNewGame);
-  elements.paletteSize.addEventListener("change", startNewGame);
-  elements.allowDuplicates.addEventListener("change", startNewGame);
-  elements.soundToggle.addEventListener("change", () => {
-    soundEnabled = elements.soundToggle.checked;
-    if (soundEnabled) {
-      ensureAudioContext();
-    }
-    updateSoundLabel();
+  const settingsInputs = [
+    elements.settingsCodeLength,
+    elements.settingsPaletteSize,
+    elements.settingsAllowDuplicates,
+    elements.settingsMaxRows,
+    elements.settingsSoundToggle,
+    elements.settingsHaptics,
+    elements.settingsTimerEnabled,
+    elements.settingsTimerSeconds,
+    elements.settingsHighContrast,
+    elements.settingsLargeText,
+    elements.settingsReducedMotion,
+  ];
+  settingsInputs.forEach((input) => {
+    input.addEventListener("change", () => {
+      const updatedSettings = getSettingsFromForm();
+      saveSettings(updatedSettings);
+      if (soundEnabled) {
+        ensureAudioContext();
+      }
+    });
+  });
+  elements.saveSettings.addEventListener("click", () => {
+    const updatedSettings = getSettingsFromForm();
+    saveSettings(updatedSettings);
+  });
+  elements.settingsNewGame.addEventListener("click", () => {
+    const updatedSettings = getSettingsFromForm();
+    saveSettings(updatedSettings);
+    startNewGame();
+    setScreen("game");
   });
 }
 
 function applyLoadedState(loadedState) {
   state = loadedState;
-  elements.codeLength.value = String(state.options.codeLength);
-  elements.paletteSize.value = String(state.options.paletteSize);
-  elements.allowDuplicates.checked = state.options.allowDuplicates;
   boardRows = createBoard(elements.board, state.options.maxRows, state.options.codeLength);
   elements.statusMessage.textContent = "";
   elements.reveal.innerHTML = "";
   updateNextFillIndex();
   updateBoard();
+  startTimer();
 }
 
 function initializeGame() {
-  const loadedState = loadState();
-  if (loadedState) {
-    applyLoadedState(loadedState);
-    return;
-  }
-  state = createInitialState(DEFAULT_OPTIONS);
-  startNewGame();
+  applySettingsToForm(settings);
+  applyAccessibility(settings);
+  updateSoundLabel();
+  renderStats();
+  updateResumeAvailability();
+  state = createInitialState(settings);
+  setScreen("home");
 }
 
 wireEvents();
