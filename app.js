@@ -1,5 +1,10 @@
 import { generateSecret, scoreGuess, validateGuess } from "./src/gameLogic.js";
-import { createInitialState, resetGuesses } from "./src/state.js";
+import {
+  createInitialState,
+  hydrateState,
+  resetGuesses,
+  serializeState,
+} from "./src/state.js";
 import {
   closeModal,
   createBoard,
@@ -54,6 +59,7 @@ let eraseMode = false;
 let soundEnabled = false;
 let audioContext = null;
 let hintTimeout = null;
+const STORAGE_KEY = "mastermind-state";
 
 const SOUND_PRESETS = {
   place: { frequency: 520, duration: 0.12, type: "triangle", gain: 0.18 },
@@ -156,6 +162,24 @@ function updateBoard() {
   syncSubmitButton();
 }
 
+function saveState() {
+  const payload = serializeState(state);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+}
+
+function loadState() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (!saved) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(saved);
+    return hydrateState(parsed, DEFAULT_OPTIONS);
+  } catch {
+    return null;
+  }
+}
+
 function setEraseMode(enabled) {
   eraseMode = enabled;
   if (eraseMode) {
@@ -193,6 +217,7 @@ function startNewGame() {
   elements.reveal.innerHTML = "";
   updateBoard();
   playSound("start");
+  saveState();
 }
 
 function updateSlot(rowIndex, colIndex, value) {
@@ -207,6 +232,7 @@ function updateSlot(rowIndex, colIndex, value) {
   if (!value && previousValue) {
     playSound("erase");
   }
+  saveState();
 }
 
 function handleSlotClick(event) {
@@ -272,6 +298,7 @@ function submitGuess() {
     renderReveal(elements.reveal, state.secret, paletteMap);
     elements.submit.disabled = true;
     playSound("win");
+    saveState();
     return;
   }
 
@@ -281,6 +308,7 @@ function submitGuess() {
     renderReveal(elements.reveal, state.secret, paletteMap);
     elements.submit.disabled = true;
     playSound("lose");
+    saveState();
     return;
   }
 
@@ -289,6 +317,7 @@ function submitGuess() {
   updateNextFillIndex();
   elements.statusMessage.textContent = "";
   updateBoard();
+  saveState();
 }
 
 function handlePaletteClick(event) {
@@ -398,9 +427,31 @@ function wireEvents() {
   });
 }
 
+function applyLoadedState(loadedState) {
+  state = loadedState;
+  elements.codeLength.value = String(state.options.codeLength);
+  elements.paletteSize.value = String(state.options.paletteSize);
+  elements.allowDuplicates.checked = state.options.allowDuplicates;
+  boardRows = createBoard(elements.board, state.options.maxRows, state.options.codeLength);
+  elements.statusMessage.textContent = "";
+  elements.reveal.innerHTML = "";
+  updateNextFillIndex();
+  updateBoard();
+}
+
+function initializeGame() {
+  const loadedState = loadState();
+  if (loadedState) {
+    applyLoadedState(loadedState);
+    return;
+  }
+  state = createInitialState(DEFAULT_OPTIONS);
+  startNewGame();
+}
+
 wireEvents();
 updateSoundLabel();
-startNewGame();
+initializeGame();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
