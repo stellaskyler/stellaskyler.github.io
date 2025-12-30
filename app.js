@@ -62,6 +62,7 @@ let soundEnabled = false;
 let hapticsEnabled = false;
 let audioContext = null;
 let hintTimeout = null;
+const hintLastShownAt = new Map();
 const STORAGE_KEY = "mastermind-state";
 const HAPTICS_STORAGE_KEY = "mastermind-haptics-enabled";
 
@@ -154,10 +155,16 @@ function getDisabledColors() {
   return new Set(state.guesses[state.currentRow].filter(Boolean));
 }
 
-function showHint(message) {
+function showHint(type, message) {
   if (state.status !== "playing") {
     return;
   }
+  const now = Date.now();
+  const lastShownAt = hintLastShownAt.get(type);
+  if (lastShownAt && now - lastShownAt < 5000) {
+    return;
+  }
+  hintLastShownAt.set(type, now);
   if (hintTimeout) {
     clearTimeout(hintTimeout);
   }
@@ -228,6 +235,7 @@ function startNewGame() {
   };
 
   resetGuesses(state);
+  hintLastShownAt.clear();
   setEraseMode(false);
   updateNextFillIndex();
 
@@ -382,7 +390,7 @@ function handleColorTap(colorId) {
     const usedColors = new Set(currentGuess.filter(Boolean));
     if (state.editIndex === null || currentGuess[state.editIndex] !== colorId) {
       if (usedColors.has(colorId)) {
-        showHint("That color is already used.");
+        showHint("duplicate", "That color is already used.");
         return;
       }
     }
@@ -397,7 +405,7 @@ function handleColorTap(colorId) {
   }
 
   if (state.nextFillIndex === null) {
-    showHint("Tap a slot to replace.");
+    showHint("rowFull", "Tap a slot to replace.");
     return;
   }
 
