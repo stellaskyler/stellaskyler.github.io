@@ -61,8 +61,10 @@ const elements = {
   rowCounter: document.querySelector("#row-counter"),
   reveal: document.querySelector("#reveal-pegs"),
   statusMessage: document.querySelector("#status-message"),
-  settingsCodeLength: document.querySelector("#settings-code-length"),
-  settingsPaletteSize: document.querySelector("#settings-palette-size"),
+  settingsCodeLengthGroup: document.querySelector("#settings-code-length"),
+  settingsCodeLengthOptions: document.querySelectorAll('input[name="settings-code-length"]'),
+  settingsPaletteSizeGroup: document.querySelector("#settings-palette-size"),
+  settingsPaletteSizeOptions: document.querySelectorAll('input[name="settings-palette-size"]'),
   settingsAllowDuplicates: document.querySelector("#settings-allow-duplicates"),
   settingsMaxRows: document.querySelector("#settings-max-rows"),
   settingsSoundToggle: document.querySelector("#settings-sound-toggle"),
@@ -83,8 +85,10 @@ const elements = {
   statsBestStreak: document.querySelector("#stats-best-streak"),
   statsBestTurns: document.querySelector("#stats-best-turns"),
   statsAverageTurns: document.querySelector("#stats-average-turns"),
-  codeLength: document.querySelector("#code-length"),
-  paletteSize: document.querySelector("#palette-size"),
+  codeLengthGroup: document.querySelector("#code-length"),
+  codeLengthOptions: document.querySelectorAll('input[name="code-length"]'),
+  paletteSizeGroup: document.querySelector("#palette-size"),
+  paletteSizeOptions: document.querySelectorAll('input[name="palette-size"]'),
   allowDuplicates: document.querySelector("#allow-duplicates"),
   soundToggle: document.querySelector("#sound-toggle"),
   soundLabel: document.querySelector("#sound-label"),
@@ -192,6 +196,18 @@ function clampNumber(value, min, max, fallback) {
   return Math.min(Math.max(number, min), max);
 }
 
+function getCheckedValue(options, fallback) {
+  const checked = Array.from(options).find((option) => option.checked);
+  return checked ? checked.value : fallback;
+}
+
+function setCheckedValue(options, value) {
+  const targetValue = String(value);
+  options.forEach((option) => {
+    option.checked = option.value === targetValue;
+  });
+}
+
 function loadSettings() {
   const saved = localStorage.getItem(SETTINGS_KEY);
   if (!saved) {
@@ -215,8 +231,8 @@ function saveSettings(nextSettings) {
 }
 
 function applySettingsToForm(currentSettings) {
-  elements.settingsCodeLength.value = String(currentSettings.codeLength);
-  elements.settingsPaletteSize.value = String(currentSettings.paletteSize);
+  setCheckedValue(elements.settingsCodeLengthOptions, currentSettings.codeLength);
+  setCheckedValue(elements.settingsPaletteSizeOptions, currentSettings.paletteSize);
   elements.settingsAllowDuplicates.checked = currentSettings.allowDuplicates;
   elements.settingsMaxRows.value = String(currentSettings.maxRows);
   elements.settingsSoundToggle.checked = currentSettings.soundEnabled;
@@ -230,8 +246,18 @@ function applySettingsToForm(currentSettings) {
 
 function getSettingsFromForm() {
   return {
-    codeLength: clampNumber(elements.settingsCodeLength.value, 3, 6, DEFAULT_OPTIONS.codeLength),
-    paletteSize: clampNumber(elements.settingsPaletteSize.value, 4, 8, DEFAULT_OPTIONS.paletteSize),
+    codeLength: clampNumber(
+      getCheckedValue(elements.settingsCodeLengthOptions, DEFAULT_OPTIONS.codeLength),
+      3,
+      6,
+      DEFAULT_OPTIONS.codeLength,
+    ),
+    paletteSize: clampNumber(
+      getCheckedValue(elements.settingsPaletteSizeOptions, DEFAULT_OPTIONS.paletteSize),
+      4,
+      8,
+      DEFAULT_OPTIONS.paletteSize,
+    ),
     allowDuplicates: elements.settingsAllowDuplicates.checked,
     maxRows: clampNumber(elements.settingsMaxRows.value, 6, 14, DEFAULT_OPTIONS.maxRows),
     soundEnabled: elements.settingsSoundToggle.checked,
@@ -731,17 +757,19 @@ function handleColorTap(colorId) {
   if (eraseMode) {
     setEraseMode(false);
   }
-  if (state.nextFillIndex === null) {
+  const nextIndex = getFirstEmptyIndex(state.guesses[state.currentRow]);
+  state.nextFillIndex = nextIndex;
+  if (nextIndex === null) {
     showHint("rowFull", "Tap a slot to replace.");
     return;
   }
 
-  if (!isColorAllowed(colorId, state.nextFillIndex)) {
+  if (!isColorAllowed(colorId, nextIndex)) {
     showHint("duplicate", "That color is already used.");
     return;
   }
 
-  updateSlot(state.currentRow, state.nextFillIndex, colorId);
+  updateSlot(state.currentRow, nextIndex, colorId);
   triggerHaptics("place");
 }
 
@@ -802,8 +830,8 @@ function handleDocumentClick(event) {
     elements.submit,
     elements.erase,
     elements.newGame,
-    elements.codeLength,
-    elements.paletteSize,
+    elements.codeLengthGroup,
+    elements.paletteSizeGroup,
     elements.allowDuplicates,
     elements.soundToggle,
     elements.modal,
@@ -856,8 +884,8 @@ function wireEvents() {
   });
   document.addEventListener("keydown", handleKeydown);
   const settingsInputs = [
-    elements.settingsCodeLength,
-    elements.settingsPaletteSize,
+    ...elements.settingsCodeLengthOptions,
+    ...elements.settingsPaletteSizeOptions,
     elements.settingsAllowDuplicates,
     elements.settingsMaxRows,
     elements.settingsSoundToggle,
@@ -895,8 +923,12 @@ function wireEvents() {
     }
   });
   document.addEventListener("click", handleDocumentClick);
-  elements.codeLength.addEventListener("change", startNewGame);
-  elements.paletteSize.addEventListener("change", startNewGame);
+  elements.codeLengthOptions.forEach((option) => {
+    option.addEventListener("change", startNewGame);
+  });
+  elements.paletteSizeOptions.forEach((option) => {
+    option.addEventListener("change", startNewGame);
+  });
   elements.allowDuplicates.addEventListener("change", startNewGame);
   elements.soundToggle.addEventListener("change", () => {
     soundEnabled = elements.soundToggle.checked;

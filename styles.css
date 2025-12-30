@@ -272,6 +272,57 @@ body {
   gap: 12px;
 }
 
+.option-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.option-group__label {
+  font-weight: 500;
+}
+
+.option-group__controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.option-pill {
+  position: relative;
+  display: inline-flex;
+}
+
+.option-pill input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.option-pill span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 36px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.option-pill input:checked + span {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+}
+
 .toggle {
   justify-content: flex-start;
   gap: 8px;
@@ -463,5 +514,20 @@ body {
   .options label {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .option-group {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .palette-panel {
+    position: sticky;
+    bottom: 12px;
+    z-index: 5;
+  }
+
+  .palette-panel {
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
   }
 }
