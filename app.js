@@ -92,6 +92,9 @@ const elements = {
   hapticsLabel: document.querySelector("#haptics-label"),
   modal: document.querySelector("#modal"),
   modalClose: document.querySelector("#modal-close"),
+  colorModal: document.querySelector("#color-modal"),
+  colorModalClose: document.querySelector("#color-modal-close"),
+  colorPicker: document.querySelector("#color-picker"),
 };
 
 const paletteMap = new Map(PALETTE.map((color) => [color.id, color]));
@@ -100,23 +103,19 @@ const modalOpenButtons = document.querySelectorAll(".js-how-to");
 const STORAGE_KEY = "mastermind-state";
 const SETTINGS_KEY = "mastermind-settings";
 const STATS_KEY = "mastermind-stats";
+const HAPTICS_STORAGE_KEY = "mastermind-haptics-enabled";
 
 let settings = loadSettings();
 let state = createInitialState(settings);
 let boardRows = [];
 let eraseMode = false;
 let soundEnabled = settings.soundEnabled;
+let hapticsEnabled = false;
 let audioContext = null;
 let hintTimeout = null;
 let timerInterval = null;
 let currentScreen = "home";
-let soundEnabled = false;
-let hapticsEnabled = false;
-let audioContext = null;
-let hintTimeout = null;
 const hintLastShownAt = new Map();
-const STORAGE_KEY = "mastermind-state";
-const HAPTICS_STORAGE_KEY = "mastermind-haptics-enabled";
 
 const SOUND_PRESETS = {
   place: { frequency: 520, duration: 0.12, type: "triangle", gain: 0.18 },
@@ -166,11 +165,12 @@ function playSound(name) {
   oscillator.stop(now + preset.duration + 0.05);
 }
 
-function triggerHaptics(name) {
+function triggerHaptics(patternOrName) {
   if (!hapticsEnabled || !("vibrate" in navigator)) {
     return;
   }
-  const pattern = HAPTIC_PRESETS[name];
+  const pattern =
+    typeof patternOrName === "string" ? HAPTIC_PRESETS[patternOrName] : patternOrName;
   if (!pattern) {
     return;
   }
@@ -320,15 +320,6 @@ function renderStats(stats = loadStats()) {
     stats.averageTurns === null ? "-" : stats.averageTurns.toFixed(1);
 }
 
-function triggerHaptics(pattern) {
-  if (!settings.hapticsEnabled) {
-    return;
-  }
-  if (navigator.vibrate) {
-    navigator.vibrate(pattern);
-  }
-}
-
 function formatTimer(seconds) {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
@@ -447,6 +438,18 @@ function getDisabledColors() {
   return new Set(state.guesses[state.currentRow].filter(Boolean));
 }
 
+function isColorAllowed(colorId, targetIndex) {
+  if (state.options.allowDuplicates) {
+    return true;
+  }
+  const currentGuess = state.guesses[state.currentRow];
+  if (targetIndex !== null && currentGuess[targetIndex] === colorId) {
+    return true;
+  }
+  const usedColors = new Set(currentGuess.filter(Boolean));
+  return !usedColors.has(colorId);
+}
+
 function showHint(type, message) {
   if (state.status !== "playing") {
     return;
@@ -484,7 +487,9 @@ function updateBoard() {
     );
     renderFeedback(rowElements, state.feedback[index]);
   });
-  renderPalette(elements.palette, PALETTE, state.options.paletteSize, getDisabledColors());
+  const disabledColors = getDisabledColors();
+  renderPalette(elements.palette, PALETTE, state.options.paletteSize, disabledColors);
+  renderPalette(elements.colorPicker, PALETTE, state.options.paletteSize, disabledColors);
   syncSubmitButton();
   updateStatusPanel();
 }
@@ -511,6 +516,7 @@ function setEraseMode(enabled) {
   eraseMode = enabled;
   if (eraseMode) {
     state.editIndex = null;
+    closeColorPicker();
   }
   elements.erase.classList.toggle("button--ghost", !eraseMode);
   elements.erase.textContent = eraseMode ? "Erase On" : "Erase";
@@ -525,6 +531,7 @@ function startNewGame() {
   resetGuesses(state);
   hintLastShownAt.clear();
   setEraseMode(false);
+  closeColorPicker();
   updateNextFillIndex();
   state.timerRemaining = state.options.timerEnabled ? state.options.timerSeconds : null;
 
@@ -563,6 +570,21 @@ function updateSlot(rowIndex, colIndex, value) {
   saveState();
 }
 
+function openColorPicker(colIndex) {
+  state.editIndex = colIndex;
+  updateBoard();
+  openModal(elements.colorModal);
+}
+
+function closeColorPicker() {
+  if (!elements.colorModal.classList.contains("is-open")) {
+    return;
+  }
+  closeModal(elements.colorModal);
+  state.editIndex = null;
+  updateBoard();
+}
+
 function handleSlotClick(event) {
   const slot = event.target.closest(".peg-slot");
   if (!slot) {
@@ -579,14 +601,7 @@ function handleSlotClick(event) {
     return;
   }
 
-  if (state.editIndex === colIndex) {
-    state.editIndex = null;
-    updateBoard();
-    return;
-  }
-
-  state.editIndex = colIndex;
-  updateBoard();
+  openColorPicker(colIndex);
 }
 
 function handleSlotRightClick(event) {
@@ -600,6 +615,7 @@ function handleSlotRightClick(event) {
   if (rowIndex !== state.currentRow || state.status !== "playing") {
     return;
   }
+  closeColorPicker();
   state.editIndex = null;
   updateSlot(rowIndex, colIndex, null);
 }
@@ -672,11 +688,36 @@ function handlePaletteClick(event) {
   if (!option) {
     return;
   }
+  if (option.classList.contains("is-disabled")) {
+    showHint("duplicate", "That color is already used.");
+    return;
+  }
   const color = PALETTE[Number(option.dataset.index)];
   if (!color) {
     return;
   }
   handleColorTap(color.id);
+}
+
+function handleColorPickerClick(event) {
+  const option = event.target.closest(".palette__option");
+  if (!option) {
+    return;
+  }
+  const color = PALETTE[Number(option.dataset.index)];
+  if (!color) {
+    return;
+  }
+  if (state.editIndex === null) {
+    return;
+  }
+  if (!isColorAllowed(color.id, state.editIndex)) {
+    showHint("duplicate", "That color is already used.");
+    return;
+  }
+  updateSlot(state.currentRow, state.editIndex, color.id);
+  triggerHaptics("place");
+  closeColorPicker();
 }
 
 function toggleErase() {
@@ -690,27 +731,13 @@ function handleColorTap(colorId) {
   if (eraseMode) {
     setEraseMode(false);
   }
-  const currentGuess = state.guesses[state.currentRow];
-  if (!state.options.allowDuplicates) {
-    const usedColors = new Set(currentGuess.filter(Boolean));
-    if (state.editIndex === null || currentGuess[state.editIndex] !== colorId) {
-      if (usedColors.has(colorId)) {
-        showHint("duplicate", "That color is already used.");
-        return;
-      }
-    }
-  }
-
-  if (state.editIndex !== null) {
-    const targetIndex = state.editIndex;
-    state.editIndex = null;
-    updateSlot(state.currentRow, targetIndex, colorId);
-    triggerHaptics("place");
+  if (state.nextFillIndex === null) {
+    showHint("rowFull", "Tap a slot to replace.");
     return;
   }
 
-  if (state.nextFillIndex === null) {
-    showHint("rowFull", "Tap a slot to replace.");
+  if (!isColorAllowed(colorId, state.nextFillIndex)) {
+    showHint("duplicate", "That color is already used.");
     return;
   }
 
@@ -722,6 +749,12 @@ function handleKeydown(event) {
   if (elements.modal.classList.contains("is-open")) {
     if (event.key === "Escape") {
       closeModal(elements.modal);
+    }
+    return;
+  }
+  if (elements.colorModal.classList.contains("is-open")) {
+    if (event.key === "Escape") {
+      closeColorPicker();
     }
     return;
   }
@@ -757,6 +790,9 @@ function handleDocumentClick(event) {
   if (state.editIndex === null || state.status !== "playing") {
     return;
   }
+  if (elements.colorModal.classList.contains("is-open")) {
+    return;
+  }
   const activeRow = boardRows[state.currentRow]?.row;
   if (activeRow && activeRow.contains(event.target)) {
     return;
@@ -773,6 +809,8 @@ function handleDocumentClick(event) {
     elements.modal,
     elements.modalOpen,
     elements.modalClose,
+    elements.colorModal,
+    elements.colorModalClose,
   ];
   if (protectedElements.some((element) => element?.contains(event.target))) {
     return;
@@ -848,6 +886,14 @@ function wireEvents() {
     saveSettings(updatedSettings);
     startNewGame();
     setScreen("game");
+  });
+  elements.colorPicker.addEventListener("click", handleColorPickerClick);
+  elements.colorModalClose.addEventListener("click", closeColorPicker);
+  elements.colorModal.addEventListener("click", (event) => {
+    if (event.target === elements.colorModal) {
+      closeColorPicker();
+    }
+  });
   document.addEventListener("click", handleDocumentClick);
   elements.codeLength.addEventListener("change", startNewGame);
   elements.paletteSize.addEventListener("change", startNewGame);

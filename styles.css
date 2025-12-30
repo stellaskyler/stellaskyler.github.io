@@ -372,6 +372,14 @@ body {
   color: var(--muted);
 }
 
+.modal__content--compact {
+  max-width: 420px;
+}
+
+.palette--modal {
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+}
+
 @keyframes peg-pop {
   0% {
     transform: scale(0.94);
@@ -392,6 +400,12 @@ body {
 }
 
 @media (max-width: 640px) {
+  :root {
+    --peg-size: clamp(32px, 12vw, 40px);
+    --key-peg-size: clamp(12px, 3.2vw, 14px);
+    --swatch-size: clamp(28px, 10vw, 34px);
+  }
+
   .app {
     padding: 20px 16px 32px;
   }
@@ -416,6 +430,24 @@ body {
     gap: 8px;
   }
 
+  .board {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .board__rows {
+    gap: 8px;
+  }
+
+  .row__pegs {
+    gap: 6px;
+  }
+
+  .board__reveal {
+    padding: 12px;
+    gap: 8px;
+  }
+
   .key-pegs {
     justify-content: flex-start;
   }
@@ -431,9 +463,5 @@ body {
   .options label {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .palette-panel {
-    display: none;
   }
 }
