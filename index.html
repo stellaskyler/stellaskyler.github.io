@@ -74,6 +74,37 @@
                 <h2>Palette</h2>
                 <div id="palette" class="palette" role="group" aria-label="Color palette"></div>
               </section>
+          <section class="panel__section">
+            <h2>Difficulty</h2>
+            <div class="options">
+              <label>
+                Code length
+                <select id="code-length">
+                  <option value="4" selected>4</option>
+                  <option value="5">5</option>
+                </select>
+              </label>
+              <label>
+                Palette size
+                <select id="palette-size">
+                  <option value="6" selected>6</option>
+                  <option value="8">8</option>
+                </select>
+              </label>
+              <label class="toggle">
+                <input id="allow-duplicates" type="checkbox" checked />
+                Allow duplicates
+              </label>
+              <label class="toggle">
+                <input id="sound-toggle" type="checkbox" />
+                <span id="sound-label">Sound (off)</span>
+              </label>
+              <label class="toggle">
+                <input id="haptics-toggle" type="checkbox" />
+                <span id="haptics-label">Haptics (off)</span>
+              </label>
+            </div>
+          </section>
 
               <section class="panel__section">
                 <h2>Controls</h2>
