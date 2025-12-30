@@ -74,37 +74,59 @@
                 <h2>Palette</h2>
                 <div id="palette" class="palette" role="group" aria-label="Color palette"></div>
               </section>
-          <section class="panel__section">
-            <h2>Difficulty</h2>
-            <div class="options">
-              <label>
-                Code length
-                <select id="code-length">
-                  <option value="4" selected>4</option>
-                  <option value="5">5</option>
-                </select>
-              </label>
-              <label>
-                Palette size
-                <select id="palette-size">
-                  <option value="6" selected>6</option>
-                  <option value="8">8</option>
-                </select>
-              </label>
-              <label class="toggle">
-                <input id="allow-duplicates" type="checkbox" checked />
-                Allow duplicates
-              </label>
-              <label class="toggle">
-                <input id="sound-toggle" type="checkbox" />
-                <span id="sound-label">Sound (off)</span>
-              </label>
-              <label class="toggle">
-                <input id="haptics-toggle" type="checkbox" />
-                <span id="haptics-label">Haptics (off)</span>
-              </label>
-            </div>
-          </section>
+              <section class="panel__section">
+                <h2>Difficulty</h2>
+                <div class="options">
+                  <div class="option-group">
+                    <span class="option-group__label">Code length</span>
+                    <div
+                      id="code-length"
+                      class="option-group__controls"
+                      role="radiogroup"
+                      aria-label="Code length"
+                    >
+                      <label class="option-pill">
+                        <input type="radio" name="code-length" value="4" checked />
+                        <span>4</span>
+                      </label>
+                      <label class="option-pill">
+                        <input type="radio" name="code-length" value="5" />
+                        <span>5</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div class="option-group">
+                    <span class="option-group__label">Palette size</span>
+                    <div
+                      id="palette-size"
+                      class="option-group__controls"
+                      role="radiogroup"
+                      aria-label="Palette size"
+                    >
+                      <label class="option-pill">
+                        <input type="radio" name="palette-size" value="6" checked />
+                        <span>6</span>
+                      </label>
+                      <label class="option-pill">
+                        <input type="radio" name="palette-size" value="8" />
+                        <span>8</span>
+                      </label>
+                    </div>
+                  </div>
+                  <label class="toggle">
+                    <input id="allow-duplicates" type="checkbox" checked />
+                    Allow duplicates
+                  </label>
+                  <label class="toggle">
+                    <input id="sound-toggle" type="checkbox" />
+                    <span id="sound-label">Sound (off)</span>
+                  </label>
+                  <label class="toggle">
+                    <input id="haptics-toggle" type="checkbox" />
+                    <span id="haptics-label">Haptics (off)</span>
+                  </label>
+                </div>
+              </section>
 
               <section class="panel__section">
                 <h2>Controls</h2>
@@ -133,20 +155,42 @@
             <section class="panel__section">
               <h2>Settings</h2>
               <div class="options">
-                <label>
-                  Code length
-                  <select id="settings-code-length">
-                    <option value="4">4</option>
-                    <option value="5">5</option>
-                  </select>
-                </label>
-                <label>
-                  Palette size
-                  <select id="settings-palette-size">
-                    <option value="6">6</option>
-                    <option value="8">8</option>
-                  </select>
-                </label>
+                <div class="option-group">
+                  <span class="option-group__label">Code length</span>
+                  <div
+                    id="settings-code-length"
+                    class="option-group__controls"
+                    role="radiogroup"
+                    aria-label="Code length"
+                  >
+                    <label class="option-pill">
+                      <input type="radio" name="settings-code-length" value="4" checked />
+                      <span>4</span>
+                    </label>
+                    <label class="option-pill">
+                      <input type="radio" name="settings-code-length" value="5" />
+                      <span>5</span>
+                    </label>
+                  </div>
+                </div>
+                <div class="option-group">
+                  <span class="option-group__label">Palette size</span>
+                  <div
+                    id="settings-palette-size"
+                    class="option-group__controls"
+                    role="radiogroup"
+                    aria-label="Palette size"
+                  >
+                    <label class="option-pill">
+                      <input type="radio" name="settings-palette-size" value="6" checked />
+                      <span>6</span>
+                    </label>
+                    <label class="option-pill">
+                      <input type="radio" name="settings-palette-size" value="8" />
+                      <span>8</span>
+                    </label>
+                  </div>
+                </div>
                 <label>
                   Max rows
                   <input id="settings-max-rows" type="number" min="6" max="14" step="1" />
