@@ -18,36 +18,62 @@
           <h1>Mastermind</h1>
           <p class="subtitle">Crack the code in 10 turns.</p>
         </div>
-        <div class="header__actions">
-          <button id="how-to" class="button button--ghost">How to play</button>
+        <div id="header-actions" class="header__actions" hidden>
+          <button id="nav-home" class="button button--ghost">Home</button>
+          <button id="how-to" class="button button--ghost js-how-to">How to play</button>
           <button id="new-game" class="button">New Game</button>
         </div>
       </header>
 
-      <main class="layout">
-        <section class="board" aria-live="polite" aria-label="Game board">
-          <div id="board" class="board__rows"></div>
-          <div class="board__reveal" id="reveal" aria-live="polite">
-            <span class="reveal__label">Secret</span>
-            <div class="reveal__pegs" id="reveal-pegs"></div>
-            <span id="status-message" class="reveal__message"></span>
+      <main>
+        <section id="screen-home" class="screen">
+          <div class="panel">
+            <section class="panel__section">
+              <h2>Home</h2>
+              <p id="resume-status" class="subtitle">Start a new puzzle or continue your last game.</p>
+              <div class="controls">
+                <button id="resume-game" class="button">Play / Resume</button>
+                <button id="home-new-game" class="button button--ghost">New Game</button>
+              </div>
+              <div class="controls">
+                <button id="open-settings" class="button button--ghost">Settings</button>
+                <button id="open-stats" class="button button--ghost">Stats</button>
+                <button id="open-how-to" class="button button--ghost js-how-to">How to Play</button>
+              </div>
+            </section>
           </div>
         </section>
 
-        <aside class="panel">
-          <section class="panel__section palette-panel">
-            <h2>Palette</h2>
-            <div id="palette" class="palette" role="group" aria-label="Color palette"></div>
-          </section>
+        <section id="screen-game" class="screen" hidden>
+          <main class="layout">
+            <section class="board" aria-live="polite" aria-label="Game board">
+              <div id="board" class="board__rows"></div>
+              <div class="board__reveal" id="reveal" aria-live="polite">
+                <span class="reveal__label">Secret</span>
+                <div class="reveal__pegs" id="reveal-pegs"></div>
+                <span id="status-message" class="reveal__message"></span>
+              </div>
+            </section>
 
-          <section class="panel__section">
-            <h2>Controls</h2>
-            <div class="controls">
-              <button id="erase" class="button button--ghost">Erase</button>
-              <button id="submit" class="button" disabled>Submit Guess</button>
-            </div>
-          </section>
+            <aside class="panel">
+              <section class="panel__section">
+                <h2>Status</h2>
+                <div class="options">
+                  <div>
+                    <strong>Timer</strong>
+                    <div id="timer-value" class="subtitle">Off</div>
+                  </div>
+                  <div>
+                    <strong>Row</strong>
+                    <div id="row-counter" class="subtitle"></div>
+                  </div>
+                </div>
+              </section>
 
+              <section class="panel__section palette-panel">
+                <h2>Palette</h2>
+                <div id="palette" class="palette" role="group" aria-label="Color palette"></div>
+              </section>
           <section class="panel__section">
             <h2>Difficulty</h2>
             <div class="options">
@@ -80,17 +106,152 @@
             </div>
           </section>
 
-          <section class="panel__section">
-            <h2>Tips</h2>
-            <ul class="tips">
-              <li>Blacks = correct color &amp; position.</li>
-              <li>Whites = correct color, wrong position.</li>
-              <li>Use number keys 1-8 for quick entry.</li>
-              <li>Tap a palette color to auto-fill the next slot.</li>
-              <li>Tap a slot to target it for replacement.</li>
-            </ul>
-          </section>
-        </aside>
+              <section class="panel__section">
+                <h2>Controls</h2>
+                <div class="controls">
+                  <button id="erase" class="button button--ghost">Erase</button>
+                  <button id="submit" class="button" disabled>Submit Guess</button>
+                </div>
+              </section>
+
+              <section class="panel__section">
+                <h2>Tips</h2>
+                <ul class="tips">
+                  <li>Blacks = correct color &amp; position.</li>
+                  <li>Whites = correct color, wrong position.</li>
+                  <li>Use number keys 1-8 for quick entry.</li>
+                  <li>Tap a palette color to auto-fill the next slot.</li>
+                  <li>Tap a slot to target it for replacement.</li>
+                </ul>
+              </section>
+            </aside>
+          </main>
+        </section>
+
+        <section id="screen-settings" class="screen" hidden>
+          <div class="panel">
+            <section class="panel__section">
+              <h2>Settings</h2>
+              <div class="options">
+                <label>
+                  Code length
+                  <select id="settings-code-length">
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                  </select>
+                </label>
+                <label>
+                  Palette size
+                  <select id="settings-palette-size">
+                    <option value="6">6</option>
+                    <option value="8">8</option>
+                  </select>
+                </label>
+                <label>
+                  Max rows
+                  <input id="settings-max-rows" type="number" min="6" max="14" step="1" />
+                </label>
+                <label class="toggle">
+                  <input id="settings-allow-duplicates" type="checkbox" />
+                  Allow duplicates
+                </label>
+              </div>
+            </section>
+
+            <section class="panel__section">
+              <h2>Accessibility</h2>
+              <div class="options">
+                <label class="toggle">
+                  <input id="settings-high-contrast" type="checkbox" />
+                  High contrast
+                </label>
+                <label class="toggle">
+                  <input id="settings-large-text" type="checkbox" />
+                  Larger text
+                </label>
+                <label class="toggle">
+                  <input id="settings-reduced-motion" type="checkbox" />
+                  Reduced motion
+                </label>
+              </div>
+            </section>
+
+            <section class="panel__section">
+              <h2>Feedback</h2>
+              <div class="options">
+                <label class="toggle">
+                  <input id="settings-sound-toggle" type="checkbox" />
+                  <span id="settings-sound-label">Sound (off)</span>
+                </label>
+                <label class="toggle">
+                  <input id="settings-haptics" type="checkbox" />
+                  Haptics
+                </label>
+              </div>
+            </section>
+
+            <section class="panel__section">
+              <h2>Timer</h2>
+              <div class="options">
+                <label class="toggle">
+                  <input id="settings-timer-enabled" type="checkbox" />
+                  Enable timer
+                </label>
+                <label>
+                  Duration (seconds)
+                  <input id="settings-timer-seconds" type="number" min="60" max="1800" step="30" />
+                </label>
+              </div>
+              <p class="subtitle">Settings apply to new games.</p>
+              <div class="controls">
+                <button id="save-settings" class="button">Save Settings</button>
+                <button id="settings-new-game" class="button button--ghost">Start New Game</button>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section id="screen-stats" class="screen" hidden>
+          <div class="panel">
+            <section class="panel__section">
+              <h2>Stats</h2>
+              <div class="options">
+                <div>
+                  <strong>Games played</strong>
+                  <div id="stats-games" class="subtitle">0</div>
+                </div>
+                <div>
+                  <strong>Wins</strong>
+                  <div id="stats-wins" class="subtitle">0</div>
+                </div>
+                <div>
+                  <strong>Losses</strong>
+                  <div id="stats-losses" class="subtitle">0</div>
+                </div>
+                <div>
+                  <strong>Win rate</strong>
+                  <div id="stats-win-rate" class="subtitle">0%</div>
+                </div>
+                <div>
+                  <strong>Current streak</strong>
+                  <div id="stats-current-streak" class="subtitle">0</div>
+                </div>
+                <div>
+                  <strong>Best streak</strong>
+                  <div id="stats-best-streak" class="subtitle">0</div>
+                </div>
+                <div>
+                  <strong>Best solve</strong>
+                  <div id="stats-best-turns" class="subtitle">-</div>
+                </div>
+                <div>
+                  <strong>Average turns</strong>
+                  <div id="stats-average-turns" class="subtitle">-</div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
       </main>
     </div>
 

@@ -8,6 +8,7 @@ export function createInitialState(options) {
     nextFillIndex: 0,
     editIndex: null,
     status: "playing",
+    timerRemaining: options.timerEnabled ? options.timerSeconds : null,
   };
 }
 
@@ -43,6 +44,7 @@ export function serializeState(state) {
     currentRow: state.currentRow,
     editIndex: state.editIndex,
     status: state.status,
+    timerRemaining: state.timerRemaining,
   };
 }
 
@@ -72,5 +74,10 @@ export function hydrateState(savedState, fallbackOptions) {
       ? savedState.editIndex
       : null;
   state.status = "playing";
+  state.timerRemaining = Number.isFinite(savedState.timerRemaining)
+    ? Math.max(savedState.timerRemaining, 0)
+    : options.timerEnabled
+      ? options.timerSeconds
+      : null;
   return state;
 }
