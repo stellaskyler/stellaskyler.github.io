@@ -96,9 +96,8 @@ const elements = {
   hapticsLabel: document.querySelector("#haptics-label"),
   modal: document.querySelector("#modal"),
   modalClose: document.querySelector("#modal-close"),
-  colorModal: document.querySelector("#color-modal"),
-  colorModalClose: document.querySelector("#color-modal-close"),
-  colorPicker: document.querySelector("#color-picker"),
+  radialMenu: document.querySelector("#radial-menu"),
+  radialMenuRing: document.querySelector("#radial-menu-ring"),
 };
 
 const paletteMap = new Map(PALETTE.map((color) => [color.id, color]));
@@ -120,6 +119,13 @@ let hintTimeout = null;
 let timerInterval = null;
 let currentScreen = "home";
 const hintLastShownAt = new Map();
+const radialState = {
+  isOpen: false,
+  pointerId: null,
+  rowIndex: null,
+  colIndex: null,
+  selectedColorId: null,
+};
 
 const SOUND_PRESETS = {
   place: { frequency: 520, duration: 0.12, type: "triangle", gain: 0.18 },
@@ -476,6 +482,36 @@ function isColorAllowed(colorId, targetIndex) {
   return !usedColors.has(colorId);
 }
 
+function renderRadialMenu(palette, paletteSize, disabledColors) {
+  if (!elements.radialMenuRing) {
+    return;
+  }
+  elements.radialMenuRing.innerHTML = "";
+  const activePalette = palette.slice(0, paletteSize);
+  const step = 360 / activePalette.length;
+  activePalette.forEach((color, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "radial-menu__option";
+    button.dataset.colorId = color.id;
+    button.dataset.index = String(index);
+    button.style.setProperty("--angle", `${step * index - 90}deg`);
+    button.setAttribute("aria-label", color.name);
+    const isDisabled = disabledColors.has(color.id);
+    button.setAttribute("aria-disabled", isDisabled ? "true" : "false");
+    button.classList.toggle("is-disabled", isDisabled);
+
+    const swatch = document.createElement("div");
+    swatch.className = "palette__swatch";
+    swatch.style.background = color.hex;
+    swatch.textContent = color.symbol;
+    swatch.title = color.name;
+    button.appendChild(swatch);
+
+    elements.radialMenuRing.appendChild(button);
+  });
+}
+
 function showHint(type, message) {
   if (state.status !== "playing") {
     return;
@@ -515,7 +551,7 @@ function updateBoard() {
   });
   const disabledColors = getDisabledColors();
   renderPalette(elements.palette, PALETTE, state.options.paletteSize, disabledColors);
-  renderPalette(elements.colorPicker, PALETTE, state.options.paletteSize, disabledColors);
+  renderRadialMenu(PALETTE, state.options.paletteSize, disabledColors);
   syncSubmitButton();
   updateStatusPanel();
 }
@@ -542,7 +578,7 @@ function setEraseMode(enabled) {
   eraseMode = enabled;
   if (eraseMode) {
     state.editIndex = null;
-    closeColorPicker();
+    closeRadialMenu();
   }
   elements.erase.classList.toggle("button--ghost", !eraseMode);
   elements.erase.textContent = eraseMode ? "Erase On" : "Erase";
@@ -557,7 +593,7 @@ function startNewGame() {
   resetGuesses(state);
   hintLastShownAt.clear();
   setEraseMode(false);
-  closeColorPicker();
+  closeRadialMenu();
   updateNextFillIndex();
   state.timerRemaining = state.options.timerEnabled ? state.options.timerSeconds : null;
 
@@ -596,24 +632,80 @@ function updateSlot(rowIndex, colIndex, value) {
   saveState();
 }
 
-function openColorPicker(colIndex) {
-  state.editIndex = colIndex;
-  updateBoard();
-  openModal(elements.colorModal);
-}
-
-function closeColorPicker() {
-  if (!elements.colorModal.classList.contains("is-open")) {
+function openRadialMenu({ rowIndex, colIndex, clientX, clientY }) {
+  if (!elements.radialMenu) {
     return;
   }
-  closeModal(elements.colorModal);
+  const computedRadius = Number.parseFloat(
+    getComputedStyle(elements.radialMenuRing).getPropertyValue("--radius"),
+  );
+  const radius = Number.isFinite(computedRadius) ? computedRadius : 82;
+  const padding = radius + 20;
+  const x = clampNumber(clientX, padding, window.innerWidth - padding, clientX);
+  const y = clampNumber(clientY, padding, window.innerHeight - padding, clientY);
+
+  elements.radialMenuRing.style.left = `${x}px`;
+  elements.radialMenuRing.style.top = `${y}px`;
+  elements.radialMenu.classList.add("is-open");
+  elements.radialMenu.setAttribute("aria-hidden", "false");
+
+  radialState.isOpen = true;
+  radialState.rowIndex = rowIndex;
+  radialState.colIndex = colIndex;
+  radialState.selectedColorId = null;
+  state.editIndex = colIndex;
+  updateBoard();
+}
+
+function closeRadialMenu() {
+  if (!radialState.isOpen) {
+    return;
+  }
+  elements.radialMenu.classList.remove("is-open");
+  elements.radialMenu.setAttribute("aria-hidden", "true");
+  radialState.isOpen = false;
+  radialState.pointerId = null;
+  radialState.rowIndex = null;
+  radialState.colIndex = null;
+  radialState.selectedColorId = null;
   state.editIndex = null;
   updateBoard();
 }
 
-function handleSlotClick(event) {
+function setRadialActiveOption(option) {
+  const options = elements.radialMenuRing?.querySelectorAll(".radial-menu__option");
+  options?.forEach((item) => {
+    item.classList.toggle("is-active", item === option);
+  });
+  radialState.selectedColorId = option ? option.dataset.colorId : null;
+}
+
+function finalizeRadialSelection() {
+  if (!radialState.isOpen) {
+    return;
+  }
+  const { rowIndex, colIndex, selectedColorId } = radialState;
+  closeRadialMenu();
+  if (!selectedColorId) {
+    return;
+  }
+  if (!isColorAllowed(selectedColorId, colIndex)) {
+    showHint("duplicate", "That color is already used.");
+    return;
+  }
+  updateSlot(rowIndex, colIndex, selectedColorId);
+  triggerHaptics("place");
+}
+
+function handleSlotPointerDown(event) {
   const slot = event.target.closest(".peg-slot");
   if (!slot) {
+    return;
+  }
+  if (radialState.isOpen) {
+    closeRadialMenu();
+  }
+  if (event.button === 2) {
     return;
   }
   const rowIndex = Number(slot.dataset.row);
@@ -626,8 +718,41 @@ function handleSlotClick(event) {
     updateSlot(rowIndex, colIndex, null);
     return;
   }
+  if (state.guesses[rowIndex][colIndex] !== null) {
+    showHint("slotFilled", "Use Erase to clear a slot before choosing a color.");
+    return;
+  }
+  event.preventDefault();
+  radialState.pointerId = event.pointerId;
+  openRadialMenu({ rowIndex, colIndex, clientX: event.clientX, clientY: event.clientY });
+  slot.setPointerCapture?.(event.pointerId);
+}
 
-  openColorPicker(colIndex);
+function handleRadialPointerMove(event) {
+  if (!radialState.isOpen || event.pointerId !== radialState.pointerId) {
+    return;
+  }
+  const hovered = document.elementFromPoint(event.clientX, event.clientY);
+  const option = hovered?.closest(".radial-menu__option");
+  if (option?.classList.contains("is-disabled")) {
+    setRadialActiveOption(null);
+    return;
+  }
+  setRadialActiveOption(option);
+}
+
+function handleRadialPointerUp(event) {
+  if (!radialState.isOpen || event.pointerId !== radialState.pointerId) {
+    return;
+  }
+  finalizeRadialSelection();
+}
+
+function handleRadialPointerCancel(event) {
+  if (!radialState.isOpen || event.pointerId !== radialState.pointerId) {
+    return;
+  }
+  closeRadialMenu();
 }
 
 function handleSlotRightClick(event) {
@@ -641,7 +766,7 @@ function handleSlotRightClick(event) {
   if (rowIndex !== state.currentRow || state.status !== "playing") {
     return;
   }
-  closeColorPicker();
+  closeRadialMenu();
   state.editIndex = null;
   updateSlot(rowIndex, colIndex, null);
 }
@@ -725,27 +850,6 @@ function handlePaletteClick(event) {
   handleColorTap(color.id);
 }
 
-function handleColorPickerClick(event) {
-  const option = event.target.closest(".palette__option");
-  if (!option) {
-    return;
-  }
-  const color = PALETTE[Number(option.dataset.index)];
-  if (!color) {
-    return;
-  }
-  if (state.editIndex === null) {
-    return;
-  }
-  if (!isColorAllowed(color.id, state.editIndex)) {
-    showHint("duplicate", "That color is already used.");
-    return;
-  }
-  updateSlot(state.currentRow, state.editIndex, color.id);
-  triggerHaptics("place");
-  closeColorPicker();
-}
-
 function toggleErase() {
   setEraseMode(!eraseMode);
 }
@@ -760,7 +864,7 @@ function handleColorTap(colorId) {
   const nextIndex = getFirstEmptyIndex(state.guesses[state.currentRow]);
   state.nextFillIndex = nextIndex;
   if (nextIndex === null) {
-    showHint("rowFull", "Tap a slot to replace.");
+    showHint("rowFull", "Use Erase to clear a slot first.");
     return;
   }
 
@@ -780,9 +884,9 @@ function handleKeydown(event) {
     }
     return;
   }
-  if (elements.colorModal.classList.contains("is-open")) {
+  if (radialState.isOpen) {
     if (event.key === "Escape") {
-      closeColorPicker();
+      closeRadialMenu();
     }
     return;
   }
@@ -814,41 +918,8 @@ function handleKeydown(event) {
   }
 }
 
-function handleDocumentClick(event) {
-  if (state.editIndex === null || state.status !== "playing") {
-    return;
-  }
-  if (elements.colorModal.classList.contains("is-open")) {
-    return;
-  }
-  const activeRow = boardRows[state.currentRow]?.row;
-  if (activeRow && activeRow.contains(event.target)) {
-    return;
-  }
-  const protectedElements = [
-    elements.palette,
-    elements.submit,
-    elements.erase,
-    elements.newGame,
-    elements.codeLengthGroup,
-    elements.paletteSizeGroup,
-    elements.allowDuplicates,
-    elements.soundToggle,
-    elements.modal,
-    elements.modalOpen,
-    elements.modalClose,
-    elements.colorModal,
-    elements.colorModalClose,
-  ];
-  if (protectedElements.some((element) => element?.contains(event.target))) {
-    return;
-  }
-  state.editIndex = null;
-  updateBoard();
-}
-
 function wireEvents() {
-  elements.board.addEventListener("click", handleSlotClick);
+  elements.board.addEventListener("pointerdown", handleSlotPointerDown);
   elements.board.addEventListener("contextmenu", handleSlotRightClick);
   elements.palette.addEventListener("click", handlePaletteClick);
   elements.submit.addEventListener("click", submitGuess);
@@ -883,6 +954,9 @@ function wireEvents() {
     }
   });
   document.addEventListener("keydown", handleKeydown);
+  document.addEventListener("pointermove", handleRadialPointerMove);
+  document.addEventListener("pointerup", handleRadialPointerUp);
+  document.addEventListener("pointercancel", handleRadialPointerCancel);
   const settingsInputs = [
     ...elements.settingsCodeLengthOptions,
     ...elements.settingsPaletteSizeOptions,
@@ -915,14 +989,6 @@ function wireEvents() {
     startNewGame();
     setScreen("game");
   });
-  elements.colorPicker.addEventListener("click", handleColorPickerClick);
-  elements.colorModalClose.addEventListener("click", closeColorPicker);
-  elements.colorModal.addEventListener("click", (event) => {
-    if (event.target === elements.colorModal) {
-      closeColorPicker();
-    }
-  });
-  document.addEventListener("click", handleDocumentClick);
   elements.codeLengthOptions.forEach((option) => {
     option.addEventListener("change", startNewGame);
   });
