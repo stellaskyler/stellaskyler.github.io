@@ -121,7 +121,7 @@
                   <li>Whites = correct color, wrong position.</li>
                   <li>Use number keys 1-8 for quick entry.</li>
                   <li>Tap a palette color to auto-fill the next slot.</li>
-                  <li>Tap a slot to target it for replacement.</li>
+                  <li>Tap a slot to open the color picker.</li>
                 </ul>
               </section>
             </aside>
@@ -265,12 +265,34 @@
           <p>Guess the hidden code before the turns run out.</p>
           <ul>
             <li>Tap a color in the palette to auto-fill the next slot.</li>
-            <li>Tap a slot to target it, then tap a color to replace.</li>
+            <li>Tap a slot to open a color picker.</li>
             <li>Submit to see black and white key pegs.</li>
             <li>Black means right color in the right spot.</li>
             <li>White means the color exists elsewhere.</li>
           </ul>
           <p>Press ESC to close this dialog.</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="color-modal" class="modal" aria-hidden="true">
+      <div
+        class="modal__content modal__content--compact"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="color-modal-title"
+      >
+        <header class="modal__header">
+          <h2 id="color-modal-title">Pick a color</h2>
+          <button id="color-modal-close" class="button button--ghost" aria-label="Close">✕</button>
+        </header>
+        <div class="modal__body">
+          <div
+            id="color-picker"
+            class="palette palette--modal"
+            role="group"
+            aria-label="Slot color picker"
+          ></div>
         </div>
       </div>
     </div>
