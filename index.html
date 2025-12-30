@@ -143,7 +143,7 @@
                   <li>Whites = correct color, wrong position.</li>
                   <li>Use number keys 1-8 for quick entry.</li>
                   <li>Tap a palette color to auto-fill the next slot.</li>
-                  <li>Tap a slot to open the color picker.</li>
+                  <li>Press and hold an empty slot, drag to a color, then release.</li>
                 </ul>
               </section>
             </aside>
@@ -309,7 +309,7 @@
           <p>Guess the hidden code before the turns run out.</p>
           <ul>
             <li>Tap a color in the palette to auto-fill the next slot.</li>
-            <li>Tap a slot to open a color picker.</li>
+            <li>Press and hold an empty slot, drag to a color, then release.</li>
             <li>Submit to see black and white key pegs.</li>
             <li>Black means right color in the right spot.</li>
             <li>White means the color exists elsewhere.</li>
@@ -319,25 +319,9 @@
       </div>
     </div>
 
-    <div id="color-modal" class="modal" aria-hidden="true">
-      <div
-        class="modal__content modal__content--compact"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="color-modal-title"
-      >
-        <header class="modal__header">
-          <h2 id="color-modal-title">Pick a color</h2>
-          <button id="color-modal-close" class="button button--ghost" aria-label="Close">✕</button>
-        </header>
-        <div class="modal__body">
-          <div
-            id="color-picker"
-            class="palette palette--modal"
-            role="group"
-            aria-label="Slot color picker"
-          ></div>
-        </div>
+    <div id="radial-menu" class="radial-menu" aria-hidden="true">
+      <div class="radial-menu__scrim"></div>
+      <div id="radial-menu-ring" class="radial-menu__ring" role="group" aria-label="Select color">
       </div>
     </div>
 

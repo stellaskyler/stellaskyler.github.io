@@ -431,6 +431,69 @@ body {
   grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
 }
 
+.radial-menu {
+  position: fixed;
+  inset: 0;
+  display: none;
+  pointer-events: none;
+  z-index: 30;
+}
+
+.radial-menu.is-open {
+  display: block;
+  pointer-events: auto;
+}
+
+.radial-menu__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.25);
+}
+
+.radial-menu__ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  --radius: 82px;
+}
+
+.radial-menu__option {
+  position: absolute;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  background: #f9fafb;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.15);
+  transform: translate(-50%, -50%)
+    rotate(var(--angle))
+    translate(var(--radius))
+    rotate(calc(var(--angle) * -1));
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border 0.15s ease;
+  touch-action: none;
+  cursor: pointer;
+}
+
+.radial-menu__option.is-active {
+  border-color: var(--accent);
+  box-shadow: 0 12px 24px rgba(79, 70, 229, 0.25);
+  transform: translate(-50%, -50%)
+    rotate(var(--angle))
+    translate(calc(var(--radius) + 6px))
+    rotate(calc(var(--angle) * -1));
+}
+
+.radial-menu__option.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
 @keyframes peg-pop {
   0% {
     transform: scale(0.94);
@@ -529,5 +592,14 @@ body {
 
   .palette-panel {
     box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+  }
+
+  .radial-menu__ring {
+    --radius: 66px;
+  }
+
+  .radial-menu__option {
+    width: 46px;
+    height: 46px;
   }
 }
