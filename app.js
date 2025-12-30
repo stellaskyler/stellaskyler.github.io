@@ -46,6 +46,8 @@ const elements = {
   allowDuplicates: document.querySelector("#allow-duplicates"),
   soundToggle: document.querySelector("#sound-toggle"),
   soundLabel: document.querySelector("#sound-label"),
+  hapticsToggle: document.querySelector("#haptics-toggle"),
+  hapticsLabel: document.querySelector("#haptics-label"),
   modal: document.querySelector("#modal"),
   modalOpen: document.querySelector("#how-to"),
   modalClose: document.querySelector("#modal-close"),
@@ -57,9 +59,11 @@ let state = createInitialState(DEFAULT_OPTIONS);
 let boardRows = [];
 let eraseMode = false;
 let soundEnabled = false;
+let hapticsEnabled = false;
 let audioContext = null;
 let hintTimeout = null;
 const STORAGE_KEY = "mastermind-state";
+const HAPTICS_STORAGE_KEY = "mastermind-haptics-enabled";
 
 const SOUND_PRESETS = {
   place: { frequency: 520, duration: 0.12, type: "triangle", gain: 0.18 },
@@ -69,6 +73,11 @@ const SOUND_PRESETS = {
   win: { frequency: 820, duration: 0.3, type: "sine", gain: 0.24 },
   lose: { frequency: 200, duration: 0.28, type: "sawtooth", gain: 0.2 },
   start: { frequency: 480, duration: 0.16, type: "sine", gain: 0.18 },
+};
+
+const HAPTIC_PRESETS = {
+  place: 20,
+  erase: 15,
 };
 
 function ensureAudioContext() {
@@ -104,11 +113,29 @@ function playSound(name) {
   oscillator.stop(now + preset.duration + 0.05);
 }
 
+function triggerHaptics(name) {
+  if (!hapticsEnabled || !("vibrate" in navigator)) {
+    return;
+  }
+  const pattern = HAPTIC_PRESETS[name];
+  if (!pattern) {
+    return;
+  }
+  navigator.vibrate(pattern);
+}
+
 function updateSoundLabel() {
   if (!elements.soundLabel) {
     return;
   }
   elements.soundLabel.textContent = soundEnabled ? "Sound (on)" : "Sound (off)";
+}
+
+function updateHapticsLabel() {
+  if (!elements.hapticsLabel) {
+    return;
+  }
+  elements.hapticsLabel.textContent = hapticsEnabled ? "Haptics (on)" : "Haptics (off)";
 }
 
 function getFirstEmptyIndex(guess) {
@@ -231,6 +258,7 @@ function updateSlot(rowIndex, colIndex, value) {
   }
   if (!value && previousValue) {
     playSound("erase");
+    triggerHaptics("erase");
   }
   saveState();
 }
@@ -358,6 +386,7 @@ function handleColorTap(colorId) {
     const targetIndex = state.editIndex;
     state.editIndex = null;
     updateSlot(state.currentRow, targetIndex, colorId);
+    triggerHaptics("place");
     return;
   }
 
@@ -367,6 +396,7 @@ function handleColorTap(colorId) {
   }
 
   updateSlot(state.currentRow, state.nextFillIndex, colorId);
+  triggerHaptics("place");
 }
 
 function handleKeydown(event) {
@@ -425,6 +455,13 @@ function wireEvents() {
     }
     updateSoundLabel();
   });
+  if (elements.hapticsToggle) {
+    elements.hapticsToggle.addEventListener("change", () => {
+      hapticsEnabled = elements.hapticsToggle.checked;
+      localStorage.setItem(HAPTICS_STORAGE_KEY, String(hapticsEnabled));
+      updateHapticsLabel();
+    });
+  }
 }
 
 function applyLoadedState(loadedState) {
@@ -440,6 +477,12 @@ function applyLoadedState(loadedState) {
 }
 
 function initializeGame() {
+  const storedHaptics = localStorage.getItem(HAPTICS_STORAGE_KEY);
+  hapticsEnabled = storedHaptics === "true";
+  if (elements.hapticsToggle) {
+    elements.hapticsToggle.checked = hapticsEnabled;
+  }
+  updateHapticsLabel();
   const loadedState = loadState();
   if (loadedState) {
     applyLoadedState(loadedState);
