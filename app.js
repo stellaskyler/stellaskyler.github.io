@@ -251,6 +251,12 @@ function handleSlotClick(event) {
     return;
   }
 
+  if (state.editIndex === colIndex) {
+    state.editIndex = null;
+    updateBoard();
+    return;
+  }
+
   state.editIndex = colIndex;
   updateBoard();
 }
@@ -400,6 +406,34 @@ function handleKeydown(event) {
   }
 }
 
+function handleDocumentClick(event) {
+  if (state.editIndex === null || state.status !== "playing") {
+    return;
+  }
+  const activeRow = boardRows[state.currentRow]?.row;
+  if (activeRow && activeRow.contains(event.target)) {
+    return;
+  }
+  const protectedElements = [
+    elements.palette,
+    elements.submit,
+    elements.erase,
+    elements.newGame,
+    elements.codeLength,
+    elements.paletteSize,
+    elements.allowDuplicates,
+    elements.soundToggle,
+    elements.modal,
+    elements.modalOpen,
+    elements.modalClose,
+  ];
+  if (protectedElements.some((element) => element?.contains(event.target))) {
+    return;
+  }
+  state.editIndex = null;
+  updateBoard();
+}
+
 function wireEvents() {
   elements.board.addEventListener("click", handleSlotClick);
   elements.board.addEventListener("contextmenu", handleSlotRightClick);
@@ -415,6 +449,7 @@ function wireEvents() {
     }
   });
   document.addEventListener("keydown", handleKeydown);
+  document.addEventListener("click", handleDocumentClick);
   elements.codeLength.addEventListener("change", startNewGame);
   elements.paletteSize.addEventListener("change", startNewGame);
   elements.allowDuplicates.addEventListener("change", startNewGame);
